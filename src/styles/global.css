@@ -1,0 +1,578 @@
+:root {
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    color: white;
+    background-color: #FF69B4;
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    margin: 0;
+    display: flex;
+    place-items: flex-start;
+    min-width: 320px;
+    min-height: 100vh;
+}
+
+#root {
+    width: 100%;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: #FF69B4;
+    /* Same as body */
+}
+
+h1 {
+    margin: 0;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    transform: translateY(-8px);
+    /* Move more up */
+}
+
+/* --- Language Toggle --- */
+.lang-toggle {
+    display: inline-flex;
+    /* Fit content instead of full width block behavior if parent flexes */
+    position: relative;
+    /* Needed for absolute positioning of slider */
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    /* Slightly transparent border */
+    border-radius: 50px;
+    background-color: rgba(255, 255, 255, 0.1);
+    /* Glassy background */
+    backdrop-filter: blur(4px);
+    /* Blur behind */
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    /* Inner shadow for depth */
+    padding: 0.3rem;
+    /* Give some space for the slider */
+}
+
+.slider {
+    position: absolute;
+    top: 0.3rem;
+    bottom: 0.3rem;
+    left: 0.3rem;
+    width: 50%;
+    /* Approx width, will adjust with transform */
+    background: linear-gradient(180deg, #FFFFFF 0%, #F0F0F0 100%);
+    /* Subtle gradient */
+    border-radius: 50px;
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    z-index: 0;
+    width: calc(50% - 0.3rem);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    /* Drop shadow for 3D effect */
+}
+
+/* Slide logic */
+.lang-toggle.ja .slider {
+    transform: translateX(0);
+}
+
+.lang-toggle.en .slider {
+    transform: translateX(100%);
+}
+
+.lang-btn {
+    flex: 1;
+    /* Make buttons verify equal width */
+    background: transparent;
+    border: none;
+    color: white;
+    /* Default color */
+    padding: 0.5rem 1.5rem;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    min-width: 150px;
+    /* Ensure enough width for Japanese text */
+    position: relative;
+    /* text sits above slider */
+    z-index: 1;
+    transition: color 0.3s ease;
+    text-align: center;
+    white-space: nowrap;
+    /* Prevent wrapping */
+}
+
+/* Active text color needs to be pink to contrast with white slider */
+.lang-btn.active {
+    background-color: transparent;
+    /* Remove old bg */
+    color: #FF69B4;
+}
+
+.lang-toggle.WOMB .lang-btn.active {
+    color: #0a0047;
+}
+
+.lang-btn:hover:not(.active) {
+    /* No hover effect on inactive buttons for this style, simpler is cleaner */
+    background-color: transparent;
+    /* removed opacity to stop flickering */
+}
+
+/* --- Splash Screen --- */
+.splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-color: #FF69B4;
+    /* Main Theme Pink */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    color: white;
+    font-family: 'Manrope', sans-serif;
+    /* Fade out the whole screen 0.4s before text finishes (0.5s + 0.5s - 0.4s = 0.6s delay) */
+    animation: fadeOutSplash 0.4s ease-in-out 0.6s forwards;
+    pointer-events: none;
+}
+
+.splash-content {
+    text-align: center;
+    /* Text fades out first: 0.5s delay, 0.5s duration */
+    animation: fadeOutText 0.5s ease-in-out 0.5s forwards;
+}
+
+.splash-title {
+    font-size: 5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+@keyframes fadeOutText {
+    0% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes fadeOutSplash {
+    0% {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    100% {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+/* --- Transition Overlay --- */
+.transition-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #0a0047;
+    /* Blue for WOMB entry */
+    z-index: 10000;
+    pointer-events: none;
+
+    /* Start fully clipped (hidden) at bottom-right */
+    clip-path: polygon(100% 100%, 100% 100%, 100% 100%);
+    visibility: hidden;
+    opacity: 0;
+}
+
+.transition-overlay.pink {
+    background-color: #FF69B4;
+    /* Pink for MOMMY entry */
+}
+
+.transition-overlay.active {
+    animation: wipeIn 0.8s cubic-bezier(0.645, 0.045, 0.355, 1.000) forwards;
+    visibility: visible;
+    opacity: 1;
+}
+
+.transition-overlay.fading {
+    /* Keep covering screen fully while fading out */
+    clip-path: polygon(-300% 100%, 100% -300%, 100% 100%);
+    /* Defined triangle that covers the screen: (-300, 100) -> (100, -300) -> (100, 100) */
+
+    visibility: visible;
+    opacity: 0;
+    transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+}
+
+@keyframes wipeIn {
+    0% {
+        clip-path: polygon(100% 100%, 100% 100%, 100% 100%);
+        opacity: 1;
+    }
+
+    100% {
+        clip-path: polygon(-100% 100%, 100% -100%, 100% 100%);
+        /* Diagonal wipe */
+        opacity: 1;
+    }
+}
+
+/* --- WOMB Button (Global Toggle) --- */
+.womb-button {
+    position: fixed;
+    bottom: 15%;
+    right: 10.5%;
+    z-index: 9999;
+    padding: 1.25rem 2.5rem;
+    border-radius: 1rem;
+    background-color: #0a0047;
+    /* Deep Matte Blue */
+    color: #c0caf5;
+    font-size: 1.5rem;
+    font-weight: bold;
+    /* Flat design: No shadow, no border */
+    font-family: 'Manrope', sans-serif;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.womb-button:hover {
+    transform: scale(1.05);
+    /* No color change on hover, just movement */
+}
+
+
+/* --- Utilities --- */
+.relative {
+    position: relative;
+}
+
+.absolute {
+    position: absolute;
+}
+
+.top-4 {
+    top: 1rem;
+}
+
+.right-4 {
+    right: 1rem;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.opacity-60 {
+    opacity: 0.6;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-2xl {
+    font-size: 1.5rem;
+}
+
+.text-3xl {
+    font-size: 1.875rem;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.rounded {
+    border-radius: 0.5rem;
+}
+
+.w-full {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.block {
+    display: block;
+}
+
+.flex {
+    display: flex;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.justify-start {
+    justify-content: flex-start;
+}
+
+/* Tooltip Button Styles */
+/* Error Tooltip */
+.error-tooltip {
+    position: absolute;
+    top: -0.5rem;
+    right: 0;
+    width: fit-content;
+    background-color: white;
+    color: #ff4444;
+    border: 1px solid #FF69B4;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    z-index: 10;
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.2s ease-out;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.error-tooltip::before {
+    content: '!';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    background-color: #ff4444;
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.error-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 12px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: white transparent transparent transparent;
+    z-index: 1;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Extended Utilities (Migrated from index.css) --- */
+.rounded-full {
+    border-radius: 9999px;
+}
+
+.bg-white\/10 {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.backdrop-blur-md {
+    backdrop-filter: blur(12px);
+}
+
+.border-white\/20 {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.px-6 {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+.py-2 {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.bg-white {
+    background-color: white;
+}
+
+.text-\[\#FF69B4\] {
+    color: #FF69B4;
+}
+
+.shadow-md {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.hover\:bg-white\/10:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.text-lg {
+    font-size: 1.125rem;
+}
+
+.text-xl {
+    font-size: 1.25rem;
+}
+
+.border-none {
+    border: none;
+}
+
+.px-10 {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+}
+
+.py-4 {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.py-5 {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+}
+
+.mb-8 {
+    margin-bottom: 2rem;
+}
+
+/* Form Layout Utilities */
+.p-6 {
+    padding: 1.5rem;
+}
+
+.p-3 {
+    padding: 0.75rem;
+}
+
+.p-2 {
+    padding: 0.5rem;
+}
+
+.mb-6 {
+    margin-bottom: 1.5rem;
+}
+
+.mb-4 {
+    margin-bottom: 1rem;
+}
+
+.mb-2 {
+    margin-bottom: 0.5rem;
+}
+
+.mr-2 {
+    margin-right: 0.5rem;
+}
+
+.max-w-2xl {
+    max-width: 42rem;
+}
+
+.max-w-4xl {
+    max-width: 56rem;
+}
+
+.max-w-5xl {
+    max-width: 64rem;
+}
+
+.mx-auto {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.grid {
+    display: grid;
+}
+
+.grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.gap-3 {
+    gap: 0.75rem;
+}
+
+.gap-4 {
+    gap: 1rem;
+}
+
+.gap-5 {
+    gap: 1.25rem;
+}
+
+.gap-6 {
+    gap: 1.5rem;
+}
+
+.gap-8 {
+    gap: 2rem;
+}
+
+.h-32 {
+    height: 8rem;
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Info Label */
+.info-label {
+    display: inline-block;
+    width: 6.5rem;
+    font-size: 0.85rem;
+    opacity: 0.7;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.info-row {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 0.25rem;
+}
+
+.pb-6 {
+    padding-bottom: 1.5rem;
+}

@@ -1,0 +1,21 @@
+/* --- WOMB System Styles --- */
+/* (Currently mostly managed inline or global, but ready for extraction/expansion) */
+/* Potential candidates: Editor styles, WombChat bubbles, specific glassmorphism tweaks for dark mode */
+
+/* Example: Specific scrollbar for WOMB */
+.womb-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.womb-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.womb-scroll::-webkit-scrollbar-thumb {
+    background: rgba(56, 189, 248, 0.3);
+    border-radius: 4px;
+}
+
+.womb-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(56, 189, 248, 0.5);
+}

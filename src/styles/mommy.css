@@ -1,0 +1,227 @@
+/* --- MOMMY System Styles --- */
+
+/* Glass Component Classes */
+.glass-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: white;
+}
+
+.glass-input {
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+}
+
+.glass-input:focus {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    outline: none;
+}
+
+.glass-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.glass-btn {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.glass-btn:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.2) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-solid-white {
+    background: white;
+    color: #FF69B4;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.btn-solid-white:hover {
+    background: #f8f8f8;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Side Tabs for Notebook Look */
+.side-tabs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding-top: 0;
+    z-index: 0;
+}
+
+.side-tab {
+    padding: 1.5rem 0.6rem;
+    border-radius: 0 12px 12px 0;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-left: none;
+    color: white;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    min-height: 140px;
+    letter-spacing: 2px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.side-tab.active {
+    background: white;
+    color: #FF69B4;
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+    width: 2.8rem;
+    padding-left: 0.6rem;
+    font-size: 1.1rem;
+}
+
+.side-tab:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateX(2px);
+}
+
+/* English Side Tab Adjustment */
+.side-tab.lang-en {
+    text-orientation: mixed;
+}
+
+.side-tab.lang-en.active {
+    padding-left: 0.8rem;
+    padding-bottom: 1rem;
+}
+
+/* Delete Button */
+.delete-btn {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(4px);
+    z-index: 5;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.delete-btn:hover {
+    background: #FF69B4;
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(255, 105, 180, 0.4);
+}
+
+.delete-btn:active {
+    transform: scale(0.95);
+    background: #e660a5;
+}
+
+/* Tab Close Button */
+.tab-close-btn {
+    position: absolute;
+    top: -0.5rem;
+    right: -0.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #ff4444;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 50;
+    cursor: pointer;
+}
+
+/* Custom Toggle Switch */
+.toggle-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    width: 52px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 100px;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.toggle-label:after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.toggle-checkbox:checked+.toggle-label {
+    background: #00d26a;
+    /* Green */
+    border-color: #00d26a;
+}
+
+.toggle-checkbox:checked+.toggle-label:after {
+    left: calc(100% - 2px);
+    transform: translateX(-100%);
+}
+
+.toggle-label:active:after {
+    width: 28px;
+}
+
+/* Search Input Custom Style */
+.search-input-custom {
+    color: white !important;
+}
+
+.search-input-custom::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
