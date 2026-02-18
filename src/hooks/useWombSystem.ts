@@ -11,6 +11,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     // Settings State
     const [wombOutputLength, setWombOutputLength] = useState<number>(1000);
     const [showSettings, setShowSettings] = useState<boolean>(false);
+    const [showDebugInfo, setShowDebugInfo] = useState<boolean>(false);
 
     // Generation State
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -308,6 +309,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         // State
         wombOutputLength, setWombOutputLength,
         showSettings, setShowSettings,
+        showDebugInfo, setShowDebugInfo,
         isGenerating,
         currentStoryId, setCurrentStoryId,
         content, setContent,

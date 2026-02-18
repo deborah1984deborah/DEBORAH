@@ -71,6 +71,24 @@ export interface StoryEntityHistory {
     id: string;
     storyId: string;
     entityId: string;
+    content: string; // Restored
+    createdAt: number;
+}
+
+// CORD Chat Interfaces
+export interface ChatSession {
+    id: string;
+    title: string;
+    storyId?: string; // Optional: Link to a specific Story
+    isGlobal?: boolean; // Flag for global chats
+    createdAt: number;
+    updatedAt: number;
+}
+
+export interface ChatMessage {
+    id: string;
+    sessionId: string;
+    role: 'user' | 'ai' | 'system'; // Added 'system' for future flexibility
     content: string;
     createdAt: number;
 }

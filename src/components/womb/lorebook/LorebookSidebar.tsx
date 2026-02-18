@@ -19,7 +19,6 @@ interface LorebookSidebarProps {
 }
 
 export const LorebookSidebar: React.FC<LorebookSidebarProps> = ({
-    lang,
     mommyList, nerdList, loreList,
     activeMommyIds, setActiveMommyIds,
     activeNerdIds, setActiveNerdIds,

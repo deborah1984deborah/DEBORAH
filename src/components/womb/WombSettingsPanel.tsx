@@ -5,13 +5,17 @@ interface WombSettingsPanelProps {
     lang: 'ja' | 'en';
     wombOutputLength: number;
     setWombOutputLength: (length: number) => void;
+    showDebugInfo: boolean;
+    setShowDebugInfo: (show: boolean) => void;
 }
 
 export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
     showSettings,
     lang,
     wombOutputLength,
-    setWombOutputLength
+    setWombOutputLength,
+    showDebugInfo,
+    setShowDebugInfo
 }) => {
     return (
         <div style={{
@@ -70,6 +74,26 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>chars</span>
                 </div>
             </div>
-        </div>
+
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                        type="checkbox"
+                        checked={showDebugInfo}
+                        onChange={(e) => setShowDebugInfo(e.target.checked)}
+                        style={{
+                            accentColor: '#38bdf8',
+                            width: '16px',
+                            height: '16px',
+                            cursor: 'pointer'
+                        }}
+                    />
+                    <span style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
+                        {lang === 'ja' ? 'CORDデバッグ情報を表示' : 'Show CORD Debug Info'}
+                    </span>
+                </label>
+            </div>
+        </div >
     );
 };

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MommySystem } from './components/mommy/MommySystem'
 import { WombSystem } from './components/womb/WombSystem'
+import { ApiKeyWarning } from './components/shared/ApiKeyWarning';
 import './styles/global.css';
 
 function App() {
@@ -108,6 +109,9 @@ function App() {
                         <WombSystem lang={lang} />
                     )}
                 </main>
+
+                {/* API Key Warning (Visual Only) */}
+                <ApiKeyWarning currentSystem={currentSystem} />
 
                 {/* System Switch Button */}
                 <button

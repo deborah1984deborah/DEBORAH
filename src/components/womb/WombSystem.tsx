@@ -22,6 +22,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         // State
         wombOutputLength, setWombOutputLength,
         showSettings, setShowSettings,
+        showDebugInfo, setShowDebugInfo,
         isGenerating,
         currentStoryId,
         content, setContent,
@@ -151,6 +152,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 lang={lang}
                                 wombOutputLength={wombOutputLength}
                                 setWombOutputLength={setWombOutputLength}
+                                showDebugInfo={showDebugInfo}
+                                setShowDebugInfo={setShowDebugInfo}
                             />
                         </div>
                     </div>
@@ -163,7 +166,11 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                         display: 'flex',
                         flexDirection: 'column'
                     }}>
-                        <CordChat lang={lang} />
+                        <CordChat
+                            lang={lang}
+                            currentStoryId={currentStoryId || undefined}
+                            showDebugInfo={showDebugInfo}
+                        />
                     </div>
                 </div>
             </div>
