@@ -12,6 +12,35 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     const [wombOutputLength, setWombOutputLength] = useState<number>(1000);
     const [showSettings, setShowSettings] = useState<boolean>(false);
     const [showDebugInfo, setShowDebugInfo] = useState<boolean>(false);
+    const [apiKey, setApiKey] = useState<string>('');
+
+    // Load API Key on mount (localStorage > .env)
+    useEffect(() => {
+        const storedKey = localStorage.getItem('womb_gemini_api_key');
+        if (storedKey) {
+            setApiKey(storedKey);
+        } else {
+            // Fallback to .env
+            const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+            if (envKey) {
+                setApiKey(envKey);
+                // Optional: Don't save to localStorage automatically to keep them separate?
+                // Or save it so it's editable?
+                // User said "initial value". If we save to LS, it becomes persistent.
+                // Let's NOT save to LS immediately, just set state.
+                // But `save API Key when changed` effect will trigger on next render if we look at `apiKey` dependency?
+                // No, dependency is `[apiKey]`. Setting state triggers it.
+                // So it will be saved to LS. This is acceptable behavior (importing from env to local settings).
+            }
+        }
+    }, []);
+
+    // Save API Key when changed
+    useEffect(() => {
+        if (apiKey) {
+            localStorage.setItem('womb_gemini_api_key', apiKey);
+        }
+    }, [apiKey]);
 
     // Generation State
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -310,6 +339,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         wombOutputLength, setWombOutputLength,
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
+        apiKey, setApiKey,
         isGenerating,
         currentStoryId, setCurrentStoryId,
         content, setContent,

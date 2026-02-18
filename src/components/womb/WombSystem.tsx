@@ -23,6 +23,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         wombOutputLength, setWombOutputLength,
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
+        apiKey, setApiKey,
         isGenerating,
         currentStoryId,
         content, setContent,
@@ -154,6 +155,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 setWombOutputLength={setWombOutputLength}
                                 showDebugInfo={showDebugInfo}
                                 setShowDebugInfo={setShowDebugInfo}
+                                apiKey={apiKey}
+                                setApiKey={setApiKey}
                             />
                         </div>
                     </div>
