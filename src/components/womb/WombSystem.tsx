@@ -24,6 +24,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
         apiKey, setApiKey,
+        tmdbAccessToken, setTmdbAccessToken,
         isGenerating,
         currentStoryId,
         content, setContent,
@@ -157,6 +158,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 setShowDebugInfo={setShowDebugInfo}
                                 apiKey={apiKey}
                                 setApiKey={setApiKey}
+                                tmdbAccessToken={tmdbAccessToken}
+                                setTmdbAccessToken={setTmdbAccessToken}
                             />
                         </div>
                     </div>

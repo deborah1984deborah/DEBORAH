@@ -354,6 +354,8 @@ export function FuckmeatCreator({ lang, onSave, initialData }: Props) {
                 onConfirm={handleConfirmVerification}
                 celebrityName={pendingData?.face || ''}
                 lang={lang}
+                apiKey={localStorage.getItem('womb_gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY}
+                tmdbAccessToken={localStorage.getItem('womb_tmdb_access_token') || import.meta.env.VITE_TMDB_ACCESS_TOKEN}
             />
         </div>
     )

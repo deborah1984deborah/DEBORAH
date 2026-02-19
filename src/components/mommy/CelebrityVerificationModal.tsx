@@ -8,6 +8,8 @@ interface CelebrityVerificationModalProps {
     onConfirm: () => void;
     celebrityName: string;
     lang: 'ja' | 'en';
+    apiKey?: string;
+    tmdbAccessToken?: string;
 }
 
 export const CelebrityVerificationModal: React.FC<CelebrityVerificationModalProps> = ({
@@ -15,36 +17,85 @@ export const CelebrityVerificationModal: React.FC<CelebrityVerificationModalProp
     onClose,
     onConfirm,
     celebrityName,
-    lang
+    lang,
+    apiKey,
+    tmdbAccessToken
 }) => {
     const [status, setStatus] = useState<VerificationStatus>('searching');
     const [imageUrl, setImageUrl] = useState<string>('');
     const [isSuccess, setIsSuccess] = useState<boolean>(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
             setStatus('searching');
             setImageUrl('');
+            setSearchError(null);
             setIsSuccess(false);
 
-            // Mock API Call
-            const timer = setTimeout(() => {
-                if (celebrityName.trim().toLowerCase() === 'error') {
-                    // Failure Case
+            const runMock = () => {
+                setTimeout(() => {
+                    if (celebrityName.trim().toLowerCase() === 'error') {
+                        setIsSuccess(false);
+                        setStatus('result');
+                    } else {
+                        setIsSuccess(true);
+                        setStatus('result');
+                        setImageUrl('https://placehold.co/300x400/22c55e/ffffff?text=Mock+Celebrity');
+                    }
+                }, 1500);
+            };
+
+            const verify = async () => {
+                // Mock/Debug Mode (No API Key)
+                if (!apiKey) {
+                    runMock();
+                    return;
+                }
+
+                // Real API Mode
+                try {
+                    const { verifyCelebrity } = await import('../../utils/gemini');
+                    const result = await verifyCelebrity(apiKey, celebrityName);
+
+                    setIsSuccess(result);
+                    if (result) {
+                        // Default Placeholder
+                        let finalImage = `https://placehold.co/300x400/22c55e/ffffff?text=${encodeURIComponent(celebrityName)}`;
+
+                        // Attempt TMDB Search
+                        if (tmdbAccessToken) {
+                            try {
+                                const { searchPerson } = await import('../../utils/tmdb');
+                                const { imageUrl: foundUrl, error } = await searchPerson(tmdbAccessToken, celebrityName);
+
+                                if (foundUrl) {
+                                    finalImage = foundUrl;
+                                } else if (error) {
+                                    setSearchError(error);
+                                }
+                            } catch (searchError) {
+                                console.error('Image Search Failed:', searchError);
+                                setSearchError('Unexpected Search Error');
+                            }
+                        } else {
+                            setSearchError('TMDB Token Missing');
+                        }
+
+                        setImageUrl(finalImage);
+                    }
+                    setStatus('result');
+                } catch (error: any) {
+                    console.error('Verification error:', error);
+                    setSearchError(error.message || 'Unknown verification error');
                     setIsSuccess(false);
                     setStatus('result');
-                } else {
-                    // Success Case
-                    setIsSuccess(true);
-                    setStatus('result');
-                    // Placeholder image
-                    setImageUrl('https://placehold.co/300x400/22c55e/ffffff?text=Celebrity+Found');
                 }
-            }, 1500);
+            };
 
-            return () => clearTimeout(timer);
+            verify();
         }
-    }, [isOpen, celebrityName]);
+    }, [isOpen, celebrityName, apiKey, tmdbAccessToken]);
 
     const getReason = () => {
         if (isSuccess) {
@@ -53,8 +104,8 @@ export const CelebrityVerificationModal: React.FC<CelebrityVerificationModalProp
                 : 'Celebrity verified. Please check the image below.';
         } else {
             return lang === 'ja'
-                ? 'データベースに該当する有名人が見つかりませんでした。綴りを確認してください。'
-                : 'No such celebrity found in our database. Please check the spelling.';
+                ? 'インターネット上で該当する有名人が見つかりませんでした。綴りを確認してください。'
+                : 'No such celebrity found on the internet. Please check the spelling.';
         }
     };
 
@@ -159,6 +210,17 @@ export const CelebrityVerificationModal: React.FC<CelebrityVerificationModalProp
                                         {lang === 'ja' ? '✅ 検証成功' : '✅ Verified'}
                                     </p>
                                     <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>{getReason()}</p>
+                                    {searchError && (
+                                        <p style={{
+                                            marginTop: '0.5rem',
+                                            fontSize: '0.75rem',
+                                            color: '#fbbf24',
+                                            borderTop: '1px solid rgba(255,255,255,0.1)',
+                                            paddingTop: '0.25rem'
+                                        }}>
+                                            ⚠️ Image Search Warning: {searchError}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* 4. Buttons */}
@@ -227,7 +289,7 @@ export const CelebrityVerificationModal: React.FC<CelebrityVerificationModalProp
                                     <p style={{ fontWeight: 'bold', color: '#f87171', fontSize: '1.125rem' }}>
                                         {lang === 'ja' ? '❌ 検証失敗' : '❌ Verification Failed'}
                                     </p>
-                                    <p style={{ opacity: 0.9 }}>{getReason()}</p>
+                                    <p style={{ opacity: 0.9, fontSize: lang === 'ja' ? '0.85rem' : '1rem' }}>{getReason()}</p>
                                 </div>
                                 <button
                                     onClick={onClose}
