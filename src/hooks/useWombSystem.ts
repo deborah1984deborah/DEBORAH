@@ -174,33 +174,50 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     }, [saveStoryData, saveToLocalStorage]);
 
 
-    // Handle Save (Triggered by GENERATE)
-    const handleSave = useCallback(() => {
-        setIsGenerating(true); // Show loading state briefly
+    // Action: Save System (Generate Story)
+    const handleSave = useCallback(async () => {
+        if (!content.trim()) return;
 
-        let newId = currentStoryId;
-        if (!newId) {
-            newId = Date.now().toString();
-            setCurrentStoryId(newId);
-        }
+        setIsGenerating(true);
+        const { parseStoryContent } = await import('../utils/bison');
+        // Now returns a single string with ignored lines removed
+        const cleanedContent = parseStoryContent(content);
 
-        // Use Unified Save Helper
-        saveGlobalStoryState(
-            newId,
-            content,
-            savedStories,
-            globalRelations,
-            activeMommyIds,
-            activeNerdIds,
-            activeLoreIds
-        );
+        try {
+            const { callGemini } = await import('../utils/gemini');
 
-        // Simulate AI generation/saving delay
-        setTimeout(() => {
+            // Send the raw (cleaned) content. 
+            // The AI will see #region ... // ... #endregion and understand it as context/instruction in-place.
+            const generatedText = await callGemini(apiKey, cleanedContent);
+
+            // Append generated text
+            const newContent = content + '\n' + generatedText;
+            setContent(newContent);
+
+            let newId = currentStoryId;
+            if (!newId) {
+                newId = Date.now().toString();
+                setCurrentStoryId(newId);
+            }
+
+            // Save via helper (Draft or Update)
+            saveGlobalStoryState(
+                newId,
+                newContent,
+                savedStories,
+                globalRelations,
+                activeMommyIds,
+                activeNerdIds,
+                activeLoreIds
+            );
+
+        } catch (error) {
+            console.error('Generation failed:', error);
+            alert(lang === 'ja' ? '生成に失敗しました。' : 'Generation failed.');
+        } finally {
             setIsGenerating(false);
-            // Optional: Show toast here
-        }, 800);
-    }, [savedStories, currentStoryId, content, globalRelations, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState]);
+        }
+    }, [apiKey, content, currentStoryId, savedStories, globalRelations, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, lang]);
 
     // Helper: Clean up state when transitioning to a fresh story
     const transitionToNewStory = useCallback(() => {
