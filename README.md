@@ -55,6 +55,16 @@ The following features are established in the core design but are currently unde
 - **Automatic History Generation/Updating by CORD**: The functionality where CORD automatically tracks and records changes or states of Entities as the story progresses. *(Currently designed, but not yet implemented.)*
 - **Context Optimization by CORD**: The advanced intermediary step where CORD interprets the story situation, selectively filters information, and synthesizes it into the optimal format before passing it to WOMB. *(Currently designed, but not yet implemented.)*
 
+---
+
+## 5. Long-Term Vision & Roadmap
+
+The ultimate goal for DEBORAH is to evolve beyond a text-based novel creation tool and become a comprehensive **Video Game Creation Studio** (or function as an interactive video game itself). Future major expansions will integrate various generative AI models directly into the creative pipeline:
+
+- **AI Image Generation**: Automatically generating character portraits, background CGs, and item illustrations based on Entity data and story context.
+- **AI Video Generation**: Creating dynamic cutscenes and animated sequences to bring the story to life.
+- **3D Model Generation**: Generating 3D assets to build fully realized, interactive worlds.
+
 <br>
 <hr>
 <br>
@@ -115,3 +125,14 @@ MOMMYは物語の世界観のベースとなる情報を作成し、管理する
 
 - **CORDによるヒストリーの自動作成・更新**: 物語の進行に合わせて、Entityの歴史や状態の変化を全自動で記録・追跡する機能。
 - **CORDによるコンテキストの最適化**: CORDが物語の状況を解釈し、WOMBに渡すべき情報を取捨選択・総合して最適な形で渡す機能。（現在は通常のキーワード反応に近い形ですが、将来的にはこの高度な連携が実装されます）
+
+---
+
+## 5. 長期的な展望とロードマップ
+
+DEBORAHの最終的な野望は、単なるテキストベースの「ノベル作成ツール」の枠を超え、それ自体が**ある種のビデオゲーム**、あるいは**ビデオゲームの総合制作環境**へと進化することです。
+今後の長期的な展開として、テキスト生成に留まらず、様々な生成AIモデルをシステムに統合していく予定です。
+
+- **AIによる画像生成**: Entityのデータや物語の状況（コンテキスト）に基づいた、キャラクターの立ち絵・背景CG・スチルイラストなどの自動生成機能。
+- **AIによる動画生成**: 動的なカットシーンやイベントアニメーションの生成機能。
+- **3Dモデル生成**: 構築した世界観を完全にインタラクティブなゲームへと昇華させるための3Dアセットの生成機能。
