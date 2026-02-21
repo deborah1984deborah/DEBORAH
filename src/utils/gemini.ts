@@ -17,24 +17,32 @@ interface GeminiResponse {
     };
 }
 
-export const callGemini = async (apiKey: string, prompt: string, model: GeminiModel = 'gemini-2.5-flash'): Promise<string> => {
+export const callGemini = async (apiKey: string, prompt: string, model: GeminiModel = 'gemini-2.5-flash', systemInstruction?: string): Promise<string> => {
     if (!apiKey) {
         throw new Error('API Key is missing');
     }
 
     try {
+        const requestBody: any = {
+            contents: [{
+                parts: [{
+                    text: prompt
+                }]
+            }]
+        };
+
+        if (systemInstruction) {
+            requestBody.system_instruction = {
+                parts: [{ text: systemInstruction }]
+            };
+        }
+
         const response = await fetch(`${getGeminiUrl(model)}?key=${apiKey}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }]
-            })
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {

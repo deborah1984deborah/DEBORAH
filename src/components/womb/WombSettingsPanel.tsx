@@ -7,8 +7,12 @@ interface WombSettingsPanelProps {
     setWombOutputLength: (length: number) => void;
     cordOutputLength: number;
     setCordOutputLength: (length: number) => void;
+    keywordScanRange: number;
+    setKeywordScanRange: (length: number) => void;
     showDebugInfo: boolean;
     setShowDebugInfo: (show: boolean) => void;
+    showWombDebugInfo: boolean;
+    setShowWombDebugInfo: (show: boolean) => void;
     apiKey: string;
     setApiKey: (key: string) => void;
     tmdbAccessToken: string;
@@ -24,8 +28,12 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
     setWombOutputLength,
     cordOutputLength,
     setCordOutputLength,
+    keywordScanRange,
+    setKeywordScanRange,
     showDebugInfo,
     setShowDebugInfo,
+    showWombDebugInfo,
+    setShowWombDebugInfo,
     apiKey,
     setApiKey,
     tmdbAccessToken,
@@ -167,7 +175,78 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                 </div>
             </div>
 
-            {/* 2. Debug Info Toggle */}
+            {/* 2.5. Keyword Scan Range */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
+                    {lang === 'ja' ? 'キーワードの走査範囲 (文字数)' : 'Keyword Scan Range (Chars)'}
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                        type="number"
+                        value={keywordScanRange}
+                        onChange={(e) => setKeywordScanRange(Number(e.target.value))}
+                        style={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(148, 163, 184, 0.3)',
+                            borderRadius: '4px',
+                            color: '#e2e8f0',
+                            padding: '0.4rem',
+                            fontSize: '0.9rem',
+                            width: '100%',
+                            outline: 'none'
+                        }}
+                    />
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>chars</span>
+                </div>
+            </div>
+
+            {/* 3. Womb Debug Info Toggle */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
+                        {lang === 'ja' ? 'WOMBデバッグ情報を表示' : 'Show WOMB Debug Info'}
+                    </span>
+
+                    <div style={{ position: 'relative', width: '40px', height: '22px' }}>
+                        <input
+                            type="checkbox"
+                            checked={showWombDebugInfo}
+                            onChange={(e) => setShowWombDebugInfo(e.target.checked)}
+                            style={{
+                                opacity: 0,
+                                width: 0,
+                                height: 0
+                            }}
+                        />
+                        <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            borderRadius: '22px',
+                            backgroundColor: showWombDebugInfo ? 'rgba(56, 189, 248, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                            border: showWombDebugInfo ? '1px solid #38bdf8' : '1px solid rgba(148, 163, 184, 0.3)',
+                            transition: 'all 0.3s ease',
+                            boxShadow: showWombDebugInfo ? '0 0 8px rgba(56, 189, 248, 0.3)' : 'none'
+                        }}></div>
+                        <div style={{
+                            position: 'absolute',
+                            top: '3px',
+                            left: '3px',
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '50%',
+                            backgroundColor: '#fff',
+                            transform: showWombDebugInfo ? 'translateX(18px)' : 'translateX(0)',
+                            transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                        }}></div>
+                    </div>
+                </label>
+            </div>
+
+            {/* 4. CORD Debug Toggle */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%' }}>
                     <span style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>

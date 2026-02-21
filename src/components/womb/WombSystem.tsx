@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import '../../styles/womb.css';
 import { CordChat } from './CordChat';
 
@@ -11,6 +11,8 @@ import { StoryListModal } from './StoryListModal';
 import { WombSettingsPanel } from './WombSettingsPanel';
 import { WombHeader } from './WombHeader';
 import { WombEditor } from './WombEditor';
+import { WombDebugPanel } from './WombDebugPanel';
+import { CordDebugPanel } from './CordDebugPanel';
 import { useWombSystem } from '../../hooks/useWombSystem';
 
 
@@ -22,8 +24,10 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         // State
         wombOutputLength, setWombOutputLength,
         cordOutputLength, setCordOutputLength,
+        keywordScanRange, setKeywordScanRange,
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
+        showWombDebugInfo, setShowWombDebugInfo,
         apiKey, setApiKey,
         tmdbAccessToken, setTmdbAccessToken,
         aiModel, setAiModel,
@@ -40,6 +44,11 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         globalRelations,
         historyLogs,
 
+        // Debug State
+        debugSystemPrompt,
+        debugInputText,
+        debugMatchedEntities,
+
         // Actions
         handleSave,
         handleDelete,
@@ -49,8 +58,12 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         handleDeleteHistory,
         handleNewStory,
         handleSelectStory,
+        buildWombContext,
         displayTitle
     } = useWombSystem({ lang });
+
+    // State to track which debug panel is functionally in front
+    const [activeDebugPanel, setActiveDebugPanel] = useState<'womb' | 'cord'>('womb');
 
     return (
         <div className="womb-system-container" style={{
@@ -158,8 +171,12 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 setWombOutputLength={setWombOutputLength}
                                 cordOutputLength={cordOutputLength}
                                 setCordOutputLength={setCordOutputLength}
+                                keywordScanRange={keywordScanRange}
+                                setKeywordScanRange={setKeywordScanRange}
                                 showDebugInfo={showDebugInfo}
                                 setShowDebugInfo={setShowDebugInfo}
+                                showWombDebugInfo={showWombDebugInfo}
+                                setShowWombDebugInfo={setShowWombDebugInfo}
                                 apiKey={apiKey}
                                 setApiKey={setApiKey}
                                 tmdbAccessToken={tmdbAccessToken}
@@ -184,6 +201,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                             showDebugInfo={showDebugInfo}
                             apiKey={apiKey}
                             aiModel={aiModel}
+                            getWombContext={buildWombContext}
                         />
                     </div>
                 </div>
@@ -222,6 +240,26 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     onDeleteHistory={handleDeleteHistory}
                 />
             )}
+
+            {/* CORD DEBUG PANEL */}
+            <CordDebugPanel
+                showCordDebugInfo={showDebugInfo}
+                debugSystemPrompt={debugSystemPrompt}
+                debugInputText={debugInputText}
+                debugMatchedEntities={debugMatchedEntities}
+                isActive={activeDebugPanel === 'cord'}
+                onClick={() => setActiveDebugPanel('cord')}
+            />
+
+            {/* WOMB DEBUG PANEL */}
+            <WombDebugPanel
+                showWombDebugInfo={showWombDebugInfo}
+                debugSystemPrompt={debugSystemPrompt}
+                debugInputText={debugInputText}
+                debugMatchedEntities={debugMatchedEntities}
+                isActive={activeDebugPanel === 'womb'}
+                onClick={() => setActiveDebugPanel('womb')}
+            />
         </div>
     );
 };

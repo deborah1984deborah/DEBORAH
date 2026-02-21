@@ -81,6 +81,7 @@ export interface ChatSession {
     title: string;
     storyId?: string; // Optional: Link to a specific Story
     isGlobal?: boolean; // Flag for global chats
+    isAwareOfWombStory?: boolean; // Flag for WOMB Context awareness
     createdAt: number;
     updatedAt: number;
 }

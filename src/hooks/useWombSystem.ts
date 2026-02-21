@@ -17,9 +17,18 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         const stored = localStorage.getItem('cord_output_length');
         return stored ? Number(stored) : 300;
     });
+    const [keywordScanRange, setKeywordScanRange] = useState<number>(() => {
+        const stored = localStorage.getItem('womb_keyword_scan_range');
+        // デフォルトは2000文字程度（直近の数シーン分）がコンテキストとして多すぎず少なすぎず適正。
+        return stored ? Number(stored) : 2000;
+    });
     const [showSettings, setShowSettings] = useState<boolean>(false);
     const [showDebugInfo, setShowDebugInfo] = useState<boolean>(() => {
         const stored = localStorage.getItem('cord_debug_info');
+        return stored === 'true';
+    });
+    const [showWombDebugInfo, setShowWombDebugInfo] = useState<boolean>(() => {
+        const stored = localStorage.getItem('womb_debug_info');
         return stored === 'true';
     });
 
@@ -77,11 +86,24 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     }, [cordOutputLength]);
 
     useEffect(() => {
+        localStorage.setItem('womb_keyword_scan_range', keywordScanRange.toString());
+    }, [keywordScanRange]);
+
+    useEffect(() => {
         localStorage.setItem('cord_debug_info', showDebugInfo.toString());
     }, [showDebugInfo]);
 
+    useEffect(() => {
+        localStorage.setItem('womb_debug_info', showWombDebugInfo.toString());
+    }, [showWombDebugInfo]);
+
     // Generation State
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+    // WOMB Debug State
+    const [debugSystemPrompt, setDebugSystemPrompt] = useState<string>('');
+    const [debugInputText, setDebugInputText] = useState<string>('');
+    const [debugMatchedEntities, setDebugMatchedEntities] = useState<LoreItem[]>([]);
 
     // Story Management State
     const [currentStoryId, setCurrentStoryId] = useState<string | null>(null);
@@ -206,21 +228,64 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     }, [saveStoryData, saveToLocalStorage]);
 
 
+    // Helper: Build WOMB Context (Entities & Content)
+    const buildWombContext = useCallback(async () => {
+        const { parseStoryContent } = await import('../utils/bison');
+        const cleanedContent = parseStoryContent(content);
+
+        const scanTargetContent = cleanedContent.slice(-keywordScanRange);
+
+        const allActiveLoreItems = [
+            ...mommyList.filter(item => activeMommyIds.includes(item.id)),
+            ...nerdList.filter(item => activeNerdIds.includes(item.id)),
+            ...loreList.filter(item => activeLoreIds.includes(item.id))
+        ];
+
+        const matchedLoreItems = allActiveLoreItems.filter(item => {
+            if ('isAlwaysActive' in item && item.isAlwaysActive) return true;
+            const nameMatch = scanTargetContent.includes(item.name);
+            const keywordMatch = item.keywords.some(kw => scanTargetContent.includes(kw));
+            return nameMatch || keywordMatch;
+        });
+
+        let systemInstruction = "";
+        if (matchedLoreItems.length > 0) {
+            systemInstruction = matchedLoreItems.map(item => {
+                if (item.type === 'lore') {
+                    return `Name: ${item.name}, Summary: ${item.summary}`;
+                } else if (item.type === 'fuckmeat') {
+                    return `Name: ${item.name}, Age: ${item.age}, Face: ${item.face}, Height: ${item.height}(cm), Measurements: B${item.bust}/W${item.waist}/H${item.hip}(cm), History: ${item.history}`;
+                } else if (item.type === 'penis') {
+                    return `Name: ${item.name}, Age: ${item.age}, History: ${item.history}`;
+                }
+                return "";
+            }).join('\n');
+        }
+
+        return { systemInstruction, scanTargetContent, matchedLoreItems, cleanedContent };
+    }, [content, keywordScanRange, mommyList, activeMommyIds, nerdList, activeNerdIds, loreList, activeLoreIds]);
+
+
     // Action: Save System (Generate Story)
     const handleSave = useCallback(async () => {
         if (!content.trim()) return;
 
         setIsGenerating(true);
-        const { parseStoryContent } = await import('../utils/bison');
-        // Now returns a single string with ignored lines removed
-        const cleanedContent = parseStoryContent(content);
 
         try {
             const { callGemini } = await import('../utils/gemini');
 
-            // Send the raw (cleaned) content. 
-            // The AI will see #region ... // ... #endregion and understand it as context/instruction in-place.
-            const generatedText = await callGemini(apiKey, cleanedContent, aiModel);
+            // Call the shared context builder
+            const { systemInstruction, cleanedContent, matchedLoreItems } = await buildWombContext();
+
+            // Set debug info
+            if (showWombDebugInfo) {
+                setDebugSystemPrompt(systemInstruction);
+                setDebugInputText(cleanedContent);
+                setDebugMatchedEntities(matchedLoreItems);
+            }
+
+            const generatedText = await callGemini(apiKey, cleanedContent, aiModel, systemInstruction);
 
             // Append generated text
             const newContent = content + '\n' + generatedText;
@@ -249,7 +314,11 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         } finally {
             setIsGenerating(false);
         }
-    }, [apiKey, aiModel, content, currentStoryId, savedStories, globalRelations, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, lang]);
+    }, [
+        apiKey, aiModel, content, currentStoryId, savedStories, globalRelations,
+        activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, lang,
+        keywordScanRange, mommyList, nerdList, loreList // Added to dependencies
+    ]);
 
     // Helper: Clean up state when transitioning to a fresh story
     const transitionToNewStory = useCallback(() => {
@@ -393,8 +462,10 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         // State
         wombOutputLength, setWombOutputLength,
         cordOutputLength, setCordOutputLength,
+        keywordScanRange, setKeywordScanRange,
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
+        showWombDebugInfo, setShowWombDebugInfo,
         apiKey, setApiKey,
         tmdbAccessToken, setTmdbAccessToken,
         aiModel, setAiModel,
@@ -411,6 +482,11 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         globalRelations,
         historyLogs,
 
+        // Debug State
+        debugSystemPrompt,
+        debugInputText,
+        debugMatchedEntities,
+
         // Actions
         handleSave,
         handleDelete,
@@ -420,6 +496,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         handleDeleteHistory,
         handleNewStory,
         handleSelectStory,
+        buildWombContext,
         displayTitle: content.split('\n')[0]?.trim()
     };
 };

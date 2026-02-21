@@ -124,7 +124,8 @@ export const useCordChat = (currentStoryId?: string) => {
         sessionId: string,
         apiKey: string,
         aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview',
-        lang: 'ja' | 'en'
+        lang: 'ja' | 'en',
+        getWombContext?: () => Promise<{ systemInstruction: string, scanTargetContent: string, matchedLoreItems: any[], cleanedContent: string }>
     ) => {
         if (!apiKey) {
             // Fallback mock if no API key
@@ -147,10 +148,31 @@ export const useCordChat = (currentStoryId?: string) => {
             const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + sessionId);
             const currentMessages: ChatMessage[] = storedMessages ? JSON.parse(storedMessages) : messages;
 
+            const freshSessionsStrForCheck = localStorage.getItem(STORAGE_KEY_SESSIONS);
+            const freshCurrentSessions: ChatSession[] = freshSessionsStrForCheck ? JSON.parse(freshSessionsStrForCheck) : sessions;
+            const currentSession = freshCurrentSessions.find(s => s.id === sessionId);
+
             // System prompt for CORD
-            const systemPrompt = lang === 'ja'
+            let systemPrompt = lang === 'ja'
                 ? "あなたはCORDという名のアシスタントです。ユーザーの執筆やアイデア出しをクリエイティブにサポートしてください。"
                 : "You are an assistant named CORD. Creatively support the user's writing and brainstorming.";
+
+            if (currentSession?.isAwareOfWombStory && getWombContext) {
+                try {
+                    const wombContext = await getWombContext();
+                    if (wombContext) {
+                        systemPrompt += `\n\n[WOMB Story Context]\n`;
+                        if (wombContext.systemInstruction) {
+                            systemPrompt += `--- Matched Entities ---\n${wombContext.systemInstruction}\n\n`;
+                        }
+                        if (wombContext.cleanedContent) {
+                            systemPrompt += `--- Story Body Text ---\n${wombContext.cleanedContent}`;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load WOMB context for CORD", e);
+                }
+            }
 
             // Call Chat API
             const aiContent = await callGeminiChat(apiKey, currentMessages, aiModel, systemPrompt);
@@ -215,6 +237,17 @@ export const useCordChat = (currentStoryId?: string) => {
         }
     };
 
+    // Action: Toggle WOMB Awareness
+    const toggleWombAwareness = (sessionId: string, isAware: boolean) => {
+        const storedSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
+        let currentSessions: ChatSession[] = storedSessionsStr ? JSON.parse(storedSessionsStr) : sessions;
+
+        const updatedSessions = currentSessions.map(s =>
+            s.id === sessionId ? { ...s, isAwareOfWombStory: isAware } : s
+        );
+        saveSessionsToStorage(updatedSessions);
+    };
+
     // Action: Edit Message
     const editMessage = (messageId: string, newContent: string) => {
         if (!currentSessionId) return;
@@ -249,6 +282,7 @@ export const useCordChat = (currentStoryId?: string) => {
         deleteSession,
         editMessage,
         deleteMessage,
+        toggleWombAwareness,
         chatScope,
         setChatScope,
         // Filter helper
