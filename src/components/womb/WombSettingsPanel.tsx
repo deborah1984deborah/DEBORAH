@@ -5,12 +5,16 @@ interface WombSettingsPanelProps {
     lang: 'ja' | 'en';
     wombOutputLength: number;
     setWombOutputLength: (length: number) => void;
+    cordOutputLength: number;
+    setCordOutputLength: (length: number) => void;
     showDebugInfo: boolean;
     setShowDebugInfo: (show: boolean) => void;
     apiKey: string;
     setApiKey: (key: string) => void;
     tmdbAccessToken: string;
     setTmdbAccessToken: (token: string) => void;
+    aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
+    setAiModel: (model: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') => void;
 }
 
 export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
@@ -18,12 +22,16 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
     lang,
     wombOutputLength,
     setWombOutputLength,
+    cordOutputLength,
+    setCordOutputLength,
     showDebugInfo,
     setShowDebugInfo,
     apiKey,
     setApiKey,
     tmdbAccessToken,
-    setTmdbAccessToken
+    setTmdbAccessToken,
+    aiModel,
+    setAiModel
 }) => {
     return (
         <div style={{
@@ -83,6 +91,79 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                         }}
                     />
                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>chars</span>
+                </div>
+            </div>
+
+            {/* 1.5. CORD Output Length */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
+                    {lang === 'ja' ? 'CORD出力文字数' : 'CORD Output Length'}
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                        type="number"
+                        value={cordOutputLength}
+                        onChange={(e) => setCordOutputLength(Number(e.target.value))}
+                        style={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(148, 163, 184, 0.3)',
+                            borderRadius: '4px',
+                            color: '#e2e8f0',
+                            padding: '0.4rem',
+                            fontSize: '0.9rem',
+                            width: '100%',
+                            outline: 'none'
+                        }}
+                    />
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>chars</span>
+                </div>
+            </div>
+
+            {/* 2. AI Model Display */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
+                    {lang === 'ja' ? '現在のAIモデル' : 'Current AI Model'}
+                </label>
+                <div style={{
+                    backgroundColor: 'rgba(56, 189, 248, 0.05)',
+                    border: '1px solid rgba(56, 189, 248, 0.2)',
+                    borderRadius: '4px',
+                    color: '#38bdf8',
+                    padding: '0.4rem',
+                    fontSize: '0.85rem',
+                    fontFamily: 'monospace',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    position: 'relative'
+                }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    <select
+                        value={aiModel}
+                        onChange={(e) => setAiModel(e.target.value as 'gemini-2.5-flash' | 'gemini-3.1-pro-preview')}
+                        style={{
+                            appearance: 'none',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            color: '#38bdf8',
+                            fontSize: '0.85rem',
+                            fontFamily: 'monospace',
+                            width: '100%',
+                            outline: 'none',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <option value="gemini-2.5-flash" style={{ backgroundColor: '#1A1A20', color: '#e2e8f0' }}>gemini-2.5-flash</option>
+                        <option value="gemini-3.1-pro-preview" style={{ backgroundColor: '#1A1A20', color: '#e2e8f0' }}>gemini-3.1-pro-preview</option>
+                    </select>
+                    {/* Custom Dropdown Arrow */}
+                    <div style={{ pointerEvents: 'none', position: 'absolute', right: '0.5rem', color: '#38bdf8' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
                 </div>
             </div>
 

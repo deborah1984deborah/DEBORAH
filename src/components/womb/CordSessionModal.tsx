@@ -4,11 +4,13 @@ import { ChatSession } from '../../types';
 interface CordSessionModalProps {
     onClose: () => void;
     sessions: ChatSession[];
+    currentStoryId?: string;
+    lang?: 'ja' | 'en';
     onSelectSession: (sessionId: string) => void;
     onDeleteSession?: (sessionId: string) => void;
 }
 
-export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, sessions, onSelectSession, onDeleteSession }) => {
+export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, sessions, currentStoryId, lang = 'ja', onSelectSession, onDeleteSession }) => {
     // Helper to format date
     const formatDate = (timestamp: number) => {
         return new Date(timestamp).toLocaleString();
@@ -18,10 +20,23 @@ export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, ses
 
     const handleDeleteClick = (e: React.MouseEvent, sessionId: string) => {
         e.stopPropagation();
-        if (window.confirm('Are you sure you want to delete this chat?')) {
+        if (window.confirm(lang === 'ja' ? 'このチャットを削除してもよろしいですか？' : 'Are you sure you want to delete this chat?')) {
             onDeleteSession?.(sessionId);
         }
     };
+
+    // Filter State
+    const [filterMode, setFilterMode] = React.useState<'context' | 'story' | 'global'>('context');
+
+    // Apply Filter
+    const filteredSessions = React.useMemo(() => {
+        return sessions.filter(session => {
+            if (filterMode === 'global') return session.isGlobal;
+            if (filterMode === 'story') return currentStoryId && session.storyId === currentStoryId;
+            // 'context' -> Global + Current Story
+            return session.isGlobal || (currentStoryId && session.storyId === currentStoryId);
+        });
+    }, [sessions, filterMode, currentStoryId]);
 
     return (
         <div style={{
@@ -75,17 +90,55 @@ export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, ses
                         </svg>
                         SAVED CHATS
                     </h2>
-                    <button onClick={onClose} style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#94a3b8',
-                        cursor: 'pointer',
-                        fontSize: '1.5rem',
-                        padding: '0 0.5rem',
-                        transition: 'color 0.2s'
-                    }} onMouseOver={e => e.currentTarget.style.color = '#fff'} onMouseOut={e => e.currentTarget.style.color = '#94a3b8'}>
-                        ×
-                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        {/* Scope Filter Dropdown */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                            border: '1px solid rgba(148, 163, 184, 0.3)',
+                            borderRadius: '4px',
+                            padding: '0.2rem 0.5rem',
+                            position: 'relative'
+                        }}>
+                            <select
+                                value={filterMode}
+                                onChange={(e) => setFilterMode(e.target.value as 'context' | 'story' | 'global')}
+                                style={{
+                                    appearance: 'none',
+                                    backgroundColor: 'transparent',
+                                    border: 'none',
+                                    color: '#e2e8f0',
+                                    fontSize: '0.8rem',
+                                    outline: 'none',
+                                    cursor: 'pointer',
+                                    paddingRight: '1.2rem',
+                                }}
+                            >
+                                <option value="context" style={{ backgroundColor: '#1A1A20', color: '#e2e8f0' }}>Active(Global + Story)</option>
+                                <option value="story" style={{ backgroundColor: '#1A1A20', color: '#38bdf8' }}>Story Scope</option>
+                                <option value="global" style={{ backgroundColor: '#1A1A20', color: '#10b981' }}>Global Scope</option>
+                            </select>
+                            <svg style={{ position: 'absolute', right: '0.4rem', pointerEvents: 'none' }} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+
+                        <button onClick={onClose} style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            fontSize: '1.5rem',
+                            padding: '0 0.5rem',
+                            transition: 'color 0.2s',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }} onMouseOver={e => e.currentTarget.style.color = '#fff'} onMouseOut={e => e.currentTarget.style.color = '#94a3b8'}>
+                            ×
+                        </button>
+                    </div>
                 </div>
 
                 {/* List Container */}
@@ -94,12 +147,12 @@ export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, ses
                     overflowY: 'auto',
                     padding: '1rem'
                 }}>
-                    {sessions.length === 0 && (
+                    {filteredSessions.length === 0 && (
                         <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-                            No saved chats yet. Use "New Chat" to start one.
+                            {lang === 'ja' ? '表示できるチャット履歴がありません。' : 'No saved chats yet in this scope.'}
                         </div>
                     )}
-                    {sessions.map(session => (
+                    {filteredSessions.map(session => (
                         <div key={session.id}
                             onClick={() => onSelectSession(session.id)}
                             style={{
@@ -119,9 +172,32 @@ export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, ses
                             onMouseEnter={() => setHoveredSessionId(session.id)}
                             onMouseLeave={() => setHoveredSessionId(null)}
                         >
-                            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: '#e2e8f0', fontWeight: 'bold' }}>{session.title}</span>
-                                <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{formatDate(session.updatedAt)}</span>
+                            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', minWidth: 0 }}>
+                                <span style={{
+                                    color: '#e2e8f0',
+                                    fontWeight: 'bold',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    paddingRight: '1rem'
+                                }} title={session.title}>
+                                    {session.title}
+                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                    <span style={{
+                                        fontSize: '0.65rem',
+                                        padding: '0.15rem 0.5rem',
+                                        borderRadius: '12px',
+                                        backgroundColor: session.isGlobal ? 'rgba(16, 185, 129, 0.1)' : 'rgba(56, 189, 248, 0.1)',
+                                        color: session.isGlobal ? '#10b981' : '#38bdf8',
+                                        border: `1px solid ${session.isGlobal ? 'rgba(16, 185, 129, 0.3)' : 'rgba(56, 189, 248, 0.3)'}`,
+                                        fontWeight: 'bold',
+                                        letterSpacing: '0.05em'
+                                    }}>
+                                        {session.isGlobal ? 'GLOBAL' : 'STORY'}
+                                    </span>
+                                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{formatDate(session.updatedAt)}</span>
+                                </div>
                             </div>
 
                             {/* Delete Button (Visible on Hover) */}
@@ -169,7 +245,7 @@ export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, ses
                     color: '#64748b',
                     fontSize: '0.8rem'
                 }}>
-                    Select a chat to resume
+                    {lang === 'ja' ? '履歴をクリックしてチャットを再開' : 'Select a chat to resume'}
                 </div>
             </div>
         </div>

@@ -21,10 +21,12 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
     const {
         // State
         wombOutputLength, setWombOutputLength,
+        cordOutputLength, setCordOutputLength,
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
         apiKey, setApiKey,
         tmdbAccessToken, setTmdbAccessToken,
+        aiModel, setAiModel,
         isGenerating,
         currentStoryId,
         content, setContent,
@@ -154,12 +156,16 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 lang={lang}
                                 wombOutputLength={wombOutputLength}
                                 setWombOutputLength={setWombOutputLength}
+                                cordOutputLength={cordOutputLength}
+                                setCordOutputLength={setCordOutputLength}
                                 showDebugInfo={showDebugInfo}
                                 setShowDebugInfo={setShowDebugInfo}
                                 apiKey={apiKey}
                                 setApiKey={setApiKey}
                                 tmdbAccessToken={tmdbAccessToken}
                                 setTmdbAccessToken={setTmdbAccessToken}
+                                aiModel={aiModel}
+                                setAiModel={setAiModel}
                             />
                         </div>
                     </div>
@@ -176,6 +182,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                             lang={lang}
                             currentStoryId={currentStoryId || undefined}
                             showDebugInfo={showDebugInfo}
+                            apiKey={apiKey}
+                            aiModel={aiModel}
                         />
                     </div>
                 </div>

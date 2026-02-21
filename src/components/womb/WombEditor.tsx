@@ -69,6 +69,16 @@ export const WombEditor: React.FC<WombEditorProps> = ({
             }
         });
 
+        // 4. Define Folding Rules
+        monaco.languages.setLanguageConfiguration('deborah-lang', {
+            folding: {
+                markers: {
+                    start: /^\s*#region\b/i,
+                    end: /^\s*#endregion\b/i
+                }
+            }
+        });
+
         // Force set theme
         monaco.editor.setTheme('deborah-dark');
 
@@ -225,7 +235,11 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                         hideCursorInOverviewRuler: true,
                         overviewRulerBorder: false,
                         matchBrackets: 'never',
-                        renderValidationDecorations: 'off'
+                        renderValidationDecorations: 'off',
+                        
+                        // Disable word highlighting
+                        occurrencesHighlight: 'off',
+                        selectionHighlight: false
                     }}
                 />
 

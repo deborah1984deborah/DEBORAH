@@ -1,7 +1,8 @@
 
 // Gemini API Configuration
-// Gemini API Configuration (Updated for 2026 - Gemini 2.5)
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+// Gemini API Configuration (Updated for 2026 - Gemini 2.5 & 3.1)
+export type GeminiModel = 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
+const getGeminiUrl = (model: GeminiModel) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
 interface GeminiResponse {
     candidates: {
@@ -16,13 +17,13 @@ interface GeminiResponse {
     };
 }
 
-export const callGemini = async (apiKey: string, prompt: string): Promise<string> => {
+export const callGemini = async (apiKey: string, prompt: string, model: GeminiModel = 'gemini-2.5-flash'): Promise<string> => {
     if (!apiKey) {
         throw new Error('API Key is missing');
     }
 
     try {
-        const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+        const response = await fetch(`${getGeminiUrl(model)}?key=${apiKey}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -51,6 +52,69 @@ export const callGemini = async (apiKey: string, prompt: string): Promise<string
         return text;
     } catch (error) {
         console.error('Gemini API Call Failed:', error);
+        throw error;
+    }
+};
+
+// Interface for chat messages compatible with useCordChat
+export interface ChatMessageData {
+    role: 'user' | 'ai' | 'system';
+    content: string;
+}
+
+export const callGeminiChat = async (
+    apiKey: string,
+    messages: ChatMessageData[],
+    model: GeminiModel = 'gemini-2.5-flash',
+    systemInstruction?: string
+): Promise<string> => {
+    if (!apiKey) {
+        throw new Error('API Key is missing');
+    }
+
+    try {
+        // Build the contents array
+        // System messages are not officially a role in standard Gemini conversations (expected "user" or "model").
+        // We handle 'system' separately via the dedicated system_instruction field or by injecting it.
+        const contents = messages
+            .filter(msg => msg.role !== 'system') // Filter out our internal 'system' UI messages
+            .map(msg => ({
+                role: msg.role === 'ai' ? 'model' : 'user', // Map 'ai' to 'model'
+                parts: [{ text: msg.content }]
+            }));
+
+        const requestBody: any = { contents };
+
+        // Add system instructions if provided (Supported in newer Gemini APIs)
+        if (systemInstruction) {
+            requestBody.system_instruction = {
+                parts: [{ text: systemInstruction }]
+            };
+        }
+
+        const response = await fetch(`${getGeminiUrl(model)}?key=${apiKey}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+        }
+
+        const data: GeminiResponse = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!text) {
+            throw new Error('No text generated from Gemini Chat');
+        }
+
+        return text;
+    } catch (error) {
+        console.error('Gemini Chat API Call Failed:', error);
         throw error;
     }
 };

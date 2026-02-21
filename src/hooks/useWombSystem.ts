@@ -9,14 +9,30 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     // --- STATE ---
 
     // Settings State
-    const [wombOutputLength, setWombOutputLength] = useState<number>(1000);
+    const [wombOutputLength, setWombOutputLength] = useState<number>(() => {
+        const stored = localStorage.getItem('womb_output_length');
+        return stored ? Number(stored) : 1000;
+    });
+    const [cordOutputLength, setCordOutputLength] = useState<number>(() => {
+        const stored = localStorage.getItem('cord_output_length');
+        return stored ? Number(stored) : 300;
+    });
     const [showSettings, setShowSettings] = useState<boolean>(false);
-    const [showDebugInfo, setShowDebugInfo] = useState<boolean>(false);
+    const [showDebugInfo, setShowDebugInfo] = useState<boolean>(() => {
+        const stored = localStorage.getItem('cord_debug_info');
+        return stored === 'true';
+    });
 
     // API Keys
     const [apiKey, setApiKey] = useState<string>(''); // Gemini
     // TMDB Access Token
     const [tmdbAccessToken, setTmdbAccessToken] = useState<string>('');
+
+    // AI Model
+    const [aiModel, setAiModel] = useState<'gemini-2.5-flash' | 'gemini-3.1-pro-preview'>(() => {
+        const stored = localStorage.getItem('womb_ai_model');
+        return (stored as 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') || 'gemini-2.5-flash';
+    });
 
     // Load API Keys on mount (localStorage > .env)
     useEffect(() => {
@@ -47,6 +63,22 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     useEffect(() => {
         if (tmdbAccessToken) localStorage.setItem('womb_tmdb_access_token', tmdbAccessToken);
     }, [tmdbAccessToken]);
+
+    useEffect(() => {
+        localStorage.setItem('womb_ai_model', aiModel);
+    }, [aiModel]);
+
+    useEffect(() => {
+        localStorage.setItem('womb_output_length', wombOutputLength.toString());
+    }, [wombOutputLength]);
+
+    useEffect(() => {
+        localStorage.setItem('cord_output_length', cordOutputLength.toString());
+    }, [cordOutputLength]);
+
+    useEffect(() => {
+        localStorage.setItem('cord_debug_info', showDebugInfo.toString());
+    }, [showDebugInfo]);
 
     // Generation State
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -188,7 +220,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
 
             // Send the raw (cleaned) content. 
             // The AI will see #region ... // ... #endregion and understand it as context/instruction in-place.
-            const generatedText = await callGemini(apiKey, cleanedContent);
+            const generatedText = await callGemini(apiKey, cleanedContent, aiModel);
 
             // Append generated text
             const newContent = content + '\n' + generatedText;
@@ -217,7 +249,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         } finally {
             setIsGenerating(false);
         }
-    }, [apiKey, content, currentStoryId, savedStories, globalRelations, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, lang]);
+    }, [apiKey, aiModel, content, currentStoryId, savedStories, globalRelations, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, lang]);
 
     // Helper: Clean up state when transitioning to a fresh story
     const transitionToNewStory = useCallback(() => {
@@ -360,10 +392,12 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     return {
         // State
         wombOutputLength, setWombOutputLength,
+        cordOutputLength, setCordOutputLength,
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
         apiKey, setApiKey,
         tmdbAccessToken, setTmdbAccessToken,
+        aiModel, setAiModel,
         isGenerating,
         currentStoryId, setCurrentStoryId,
         content, setContent,
