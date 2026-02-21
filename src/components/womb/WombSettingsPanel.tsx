@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface WombSettingsPanelProps {
     showSettings: boolean;
@@ -19,6 +20,7 @@ interface WombSettingsPanelProps {
     setTmdbAccessToken: (token: string) => void;
     aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
     setAiModel: (model: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') => void;
+    anchorRef: React.RefObject<HTMLButtonElement>;
 }
 
 export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
@@ -39,33 +41,60 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
     tmdbAccessToken,
     setTmdbAccessToken,
     aiModel,
-    setAiModel
+    setAiModel,
+    anchorRef
 }) => {
-    return (
-        <div style={{
-            position: 'absolute',
-            top: 0,
-            left: '100%',
-            marginLeft: '0.5rem',
-            width: '280px',
-            backgroundColor: 'rgba(26, 26, 32, 0.95)', // #1A1A20 equivalent
-            border: '1px solid rgba(56, 189, 248, 0.3)',
-            borderRadius: '8px',
-            padding: '1rem',
-            zIndex: 100,
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            // Animation Styles
-            opacity: showSettings ? 1 : 0,
-            transform: showSettings ? 'translateX(0)' : 'translateX(-10px)',
-            pointerEvents: showSettings ? 'auto' : 'none',
-            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            maxHeight: '90vh', // Prevent overflow off screen
-            overflowY: 'auto' // Allow scrolling if content is too tall
-        }}>
+    const [coords, setCoords] = useState({ top: 0, left: 0 });
+    const [isFront, setIsFront] = useState(false);
+
+    useEffect(() => {
+        if (!showSettings) {
+            setIsFront(false);
+        }
+    }, [showSettings]);
+
+    useEffect(() => {
+        const updateCoords = () => {
+            if (anchorRef.current) {
+                const rect = anchorRef.current.getBoundingClientRect();
+                setCoords({
+                    top: rect.top,
+                    left: rect.right + 8 // 0.5rem equivalent
+                });
+            }
+        };
+
+        updateCoords();
+        window.addEventListener('resize', updateCoords);
+        return () => window.removeEventListener('resize', updateCoords);
+    }, [anchorRef, showSettings]); // Re-measure on show
+
+    return createPortal(
+        <div
+            onClick={() => setIsFront(true)}
+            style={{
+                position: 'fixed',
+                top: coords.top,
+                left: coords.left,
+                width: '280px',
+                backgroundColor: 'rgba(26, 26, 32, 0.95)', // #1A1A20 equivalent
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                borderRadius: '8px',
+                padding: '1rem',
+                zIndex: isFront ? 10000 : 9996, // API warning is 9999, debug active is 9999.
+                backdropFilter: 'blur(10px)',
+                boxShadow: isFront ? '0 8px 32px rgba(0, 0, 0, 0.6)' : '0 4px 12px rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+                // Animation Styles
+                opacity: showSettings ? 1 : 0,
+                transform: showSettings ? 'translateX(0)' : 'translateX(-10px)',
+                pointerEvents: showSettings ? 'auto' : 'none',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                maxHeight: '90vh', // Prevent overflow off screen
+                overflowY: 'auto' // Allow scrolling if content is too tall
+            }}>
             <div style={{
                 borderBottom: '1px solid rgba(148, 163, 184, 0.2)',
                 paddingBottom: '0.5rem',
@@ -461,6 +490,7 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                 </div>
             </div>
 
-        </div >
+        </div >,
+        document.body
     );
 };

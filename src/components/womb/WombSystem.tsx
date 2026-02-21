@@ -65,6 +65,9 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
     // State to track which debug panel is functionally in front
     const [activeDebugPanel, setActiveDebugPanel] = useState<'womb' | 'cord'>('womb');
 
+    // Ref for SETTINGS button to align the portal
+    const settingsBtnRef = React.useRef<HTMLButtonElement>(null);
+
     return (
         <div className="womb-system-container" style={{
             backgroundColor: 'rgba(26, 26, 32, 0.92)', // #1A1A20 equivalent
@@ -138,6 +141,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                         {/* SETTINGS BUTTON & PANEL */}
                         <div style={{ position: 'relative' }}>
                             <button
+                                ref={settingsBtnRef}
                                 style={{
                                     background: 'transparent',
                                     border: '1px solid rgba(148, 163, 184, 0.3)',
@@ -183,6 +187,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 setTmdbAccessToken={setTmdbAccessToken}
                                 aiModel={aiModel}
                                 setAiModel={setAiModel}
+                                anchorRef={settingsBtnRef}
                             />
                         </div>
                     </div>

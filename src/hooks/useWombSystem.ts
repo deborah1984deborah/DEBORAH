@@ -248,7 +248,25 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
             return nameMatch || keywordMatch;
         });
 
-        let systemInstruction = "";
+        // [NOTE] Why is this system prompt hardcoded in English?
+        // LLMs (like Gemini) generally follow strict, logical rules (like syntax parsing for #region) 
+        // much more accurately when instructed in English rather than Japanese. 
+        // Therefore, regardless of the UI's language setting, the core meta-instructions are kept in English 
+        // to maximize adherence to the "Bison syntax" rules.
+        let systemInstruction = `=== WRITING INSTRUCTIONS ===
+You are an expert AI co-writer (codename: WOMB). 
+The user is writing a story. You must continue the story naturally based on the provided text.
+
+CRITICAL RULE:
+If you see lines enclosed in "#region" and "#endregion" that start with "//", these are DIRECT META-INSTRUCTIONS from the author to you. 
+Example:
+#region
+// Make the next scene more dramatic and focus on Deborah's anger.
+#endregion
+
+Do NOT output these instructions in your generated text. Instead, strictly FOLLOW the instructions provided in those lines when writing the continuation of the story.
+===========================
+`;
         if (matchedLoreItems.length > 0) {
             systemInstruction = matchedLoreItems.map(item => {
                 if (item.type === 'lore') {
@@ -260,10 +278,28 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
                 }
                 return "";
             }).join('\n');
+
+            // --- Inject Specific Story History Logs ---
+            const relevantHistory = historyLogs
+                .filter(log => log.storyId === currentStoryId && matchedLoreItems.some(item => item.id === log.entityId))
+                .sort((a, b) => a.createdAt - b.createdAt); // Chronological order
+
+            if (relevantHistory.length > 0) {
+                const historyStr = matchedLoreItems.map(item => {
+                    const logsForEntity = relevantHistory.filter(log => log.entityId === item.id);
+                    if (logsForEntity.length === 0) return "";
+                    const evStr = logsForEntity.map(log => `- ${log.content}`).join('\n');
+                    return `\n[Recent History for ${item.name}]\n${evStr}`;
+                }).filter(Boolean).join('\n');
+
+                if (historyStr) {
+                    systemInstruction += `\n\n=== PAST EVENTS IN THIS STORY ===${historyStr}`;
+                }
+            }
         }
 
         return { systemInstruction, scanTargetContent, matchedLoreItems, cleanedContent };
-    }, [content, keywordScanRange, mommyList, activeMommyIds, nerdList, activeNerdIds, loreList, activeLoreIds]);
+    }, [content, keywordScanRange, mommyList, activeMommyIds, nerdList, activeNerdIds, loreList, activeLoreIds, historyLogs, currentStoryId]);
 
 
     // Action: Save System (Generate Story)
