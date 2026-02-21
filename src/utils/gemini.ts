@@ -1,8 +1,22 @@
 
 // Gemini API Configuration
 // Gemini API Configuration (Updated for 2026 - Gemini 2.5 & 3.1)
+import { SafetySetting } from '../components/womb/WombSafetyModal';
+
 export type GeminiModel = 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
 const getGeminiUrl = (model: GeminiModel) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+const getSafetySettings = (): SafetySetting[] | undefined => {
+    const stored = localStorage.getItem('womb_safety_settings');
+    if (stored) {
+        try {
+            return JSON.parse(stored) as SafetySetting[];
+        } catch (e) {
+            console.error("Failed to parse safety settings", e);
+        }
+    }
+    return undefined;
+};
 
 interface GeminiResponse {
     candidates: {
@@ -35,6 +49,11 @@ export const callGemini = async (apiKey: string, prompt: string, model: GeminiMo
             requestBody.system_instruction = {
                 parts: [{ text: systemInstruction }]
             };
+        }
+
+        const safetySettings = getSafetySettings();
+        if (safetySettings) {
+            requestBody.safetySettings = safetySettings;
         }
 
         const response = await fetch(`${getGeminiUrl(model)}?key=${apiKey}`, {
@@ -98,6 +117,11 @@ export const callGeminiChat = async (
             requestBody.system_instruction = {
                 parts: [{ text: systemInstruction }]
             };
+        }
+
+        const safetySettings = getSafetySettings();
+        if (safetySettings) {
+            requestBody.safetySettings = safetySettings;
         }
 
         const response = await fetch(`${getGeminiUrl(model)}?key=${apiKey}`, {
