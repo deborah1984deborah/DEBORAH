@@ -235,6 +235,8 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
 
         const scanTargetContent = cleanedContent.slice(-keywordScanRange);
 
+        const allLoreItems = [...mommyList, ...nerdList, ...loreList];
+
         const allActiveLoreItems = [
             ...mommyList.filter(item => activeMommyIds.includes(item.id)),
             ...nerdList.filter(item => activeNerdIds.includes(item.id)),
@@ -298,7 +300,9 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
             }
         }
 
-        return { systemInstruction, scanTargetContent, matchedLoreItems, cleanedContent };
+        const derivedTitle = content.split('\n')[0]?.trim() || "Untitled Story";
+
+        return { systemInstruction, scanTargetContent, matchedLoreItems, allActiveLoreItems, allLoreItems, cleanedContent, storyTitle: derivedTitle };
     }, [content, keywordScanRange, mommyList, activeMommyIds, nerdList, activeNerdIds, loreList, activeLoreIds, historyLogs, currentStoryId]);
 
 
@@ -467,6 +471,52 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
         }
     }, [savedStories, currentStoryId, content, historyLogs, lang, saveGlobalStoryState, globalRelations, activeMommyIds, activeNerdIds, activeLoreIds]);
 
+    const handleAddFullHistory = useCallback((entityId: string, historyContent: string) => {
+        console.log("[useWombSystem] handleAddFullHistory CALLED with:", { entityId, historyContent, currentStoryId });
+        try {
+            let targetStoryId = currentStoryId;
+
+            if (!targetStoryId) {
+                targetStoryId = Date.now().toString();
+                setCurrentStoryId(targetStoryId);
+                console.log("[useWombSystem] Story was unsaved, generated new targetStoryId:", targetStoryId);
+            }
+
+            const newId = Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+            const newHistory: StoryEntityHistory = {
+                id: newId,
+                storyId: targetStoryId,
+                entityId: entityId,
+                content: historyContent,
+                createdAt: Date.now()
+            };
+
+            const updatedLogs = [...historyLogs, newHistory].map(log =>
+                (log.storyId === "" || log.storyId === targetStoryId)
+                    ? { ...log, storyId: targetStoryId! }
+                    : log
+            );
+
+            console.log("[useWombSystem] Saving historyLogs. new length:", updatedLogs.length);
+            setHistoryLogs(updatedLogs);
+            localStorage.setItem('deborah_history_logs_v1', JSON.stringify(updatedLogs));
+
+            console.log("[useWombSystem] Calling saveGlobalStoryState...");
+            saveGlobalStoryState(
+                targetStoryId,
+                content,
+                savedStories,
+                globalRelations,
+                activeMommyIds,
+                activeNerdIds,
+                activeLoreIds
+            );
+            console.log("[useWombSystem] handleAddFullHistory COMPLETED SUCCESS");
+        } catch (error) {
+            console.error("[useWombSystem] Failed to add and save history:", error);
+        }
+    }, [currentStoryId, historyLogs, content, savedStories, globalRelations, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState]);
+
     const handleDeleteHistory = useCallback((id: string) => {
         if (window.confirm("Delete this history entry?")) {
             const updatedLogs = historyLogs.filter(log => log.id !== id);
@@ -529,6 +579,7 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
         handleAddHistory,
         handleUpdateHistory,
         handleSaveHistory,
+        handleAddFullHistory,
         handleDeleteHistory,
         handleNewStory,
         handleSelectStory,

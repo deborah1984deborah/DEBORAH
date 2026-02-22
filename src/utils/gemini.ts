@@ -21,9 +21,7 @@ const getSafetySettings = (): SafetySetting[] | undefined => {
 interface GeminiResponse {
     candidates: {
         content: {
-            parts: {
-                text: string;
-            }[];
+            parts: any[];
         };
     }[];
     error?: {
@@ -85,16 +83,23 @@ export const callGemini = async (apiKey: string, prompt: string, model: GeminiMo
 
 // Interface for chat messages compatible with useCordChat
 export interface ChatMessageData {
-    role: 'user' | 'ai' | 'system';
+    role: 'user' | 'ai' | 'system' | 'function';
     content: string;
+    functionCall?: {
+        name: string;
+        args: any;
+    };
+    // Include parts array explicitly when available to preserve Gemini's 'thought' or 'thought_signature' states for tool calling
+    rawParts?: any[];
 }
 
 export const callGeminiChat = async (
     apiKey: string,
     messages: ChatMessageData[],
     model: GeminiModel = 'gemini-2.5-flash',
-    systemInstruction?: string
-): Promise<string> => {
+    systemInstruction?: string,
+    tools?: any[]
+): Promise<string | { functionCall: { name: string, args: any }, rawParts: any[] }> => {
     if (!apiKey) {
         throw new Error('API Key is missing');
     }
@@ -105,10 +110,40 @@ export const callGeminiChat = async (
         // We handle 'system' separately via the dedicated system_instruction field or by injecting it.
         const contents = messages
             .filter(msg => msg.role !== 'system') // Filter out our internal 'system' UI messages
-            .map(msg => ({
-                role: msg.role === 'ai' ? 'model' : 'user', // Map 'ai' to 'model'
-                parts: [{ text: msg.content }]
-            }));
+            .map(msg => {
+                if (msg.role === 'function') {
+                    // When responding with a function result
+                    return {
+                        role: 'function',
+                        parts: [{
+                            functionResponse: {
+                                name: msg.functionCall?.name,
+                                response: { result: msg.content }
+                            }
+                        }]
+                    };
+                } else if (msg.functionCall && msg.rawParts) {
+                    // When the AI made a function call in the history, we MUST pass back the exact parts
+                    // it generated, which includes any `thought` text and `functionCall` dict with `thought_signature`.
+                    return {
+                        role: 'model',
+                        parts: msg.rawParts
+                    };
+                } else if (msg.functionCall) {
+                    // Fallback for older stored messages that lack rawParts
+                    return {
+                        role: 'model',
+                        parts: [{
+                            functionCall: msg.functionCall
+                        }]
+                    };
+                } else {
+                    return {
+                        role: msg.role === 'ai' ? 'model' : 'user', // Map 'ai' to 'model'
+                        parts: [{ text: msg.content }]
+                    };
+                }
+            });
 
         const requestBody: any = { contents };
 
@@ -124,6 +159,12 @@ export const callGeminiChat = async (
             requestBody.safetySettings = safetySettings;
         }
 
+        if (tools && tools.length > 0) {
+            requestBody.tools = tools;
+        }
+
+        console.log("Gemini API Request Body:", JSON.stringify(requestBody, null, 2));
+
         const response = await fetch(`${getGeminiUrl(model)}?key=${apiKey}`, {
             method: 'POST',
             headers: {
@@ -133,15 +174,31 @@ export const callGeminiChat = async (
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorRawData = await response.text();
+            console.error("Gemini API Raw Error Response:", errorRawData);
+            let errorData;
+            try {
+                errorData = JSON.parse(errorRawData);
+            } catch (e) {
+                errorData = { error: { message: errorRawData } };
+            }
             throw new Error(errorData.error?.message || `API Error: ${response.status}`);
         }
 
         const data: GeminiResponse = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        const parts = data.candidates?.[0]?.content?.parts;
+        const functionCallPart = parts?.find(p => p.functionCall);
+
+        if (functionCallPart?.functionCall) {
+            return { functionCall: functionCallPart.functionCall, rawParts: parts || [] };
+        }
+
+        const textPart = parts?.find(p => p.text);
+        const text = textPart?.text;
 
         if (!text) {
-            throw new Error('No text generated from Gemini Chat');
+            throw new Error('No text or function call generated from Gemini Chat');
         }
 
         return text;

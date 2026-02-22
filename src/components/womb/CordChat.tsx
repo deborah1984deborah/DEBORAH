@@ -202,133 +202,169 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                             {lang === 'ja' ? '新しいチャットを開始...' : 'Start a new chat...'}
                         </div>
                     )}
-                    {messages.map(msg => (
-                        <div
-                            key={msg.id}
-                            style={{
-                                display: 'flex',
-                                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                                position: 'relative'
-                            }}
-                            onMouseEnter={() => setHoveredMessageId(msg.id)}
-                            onMouseLeave={() => setHoveredMessageId(null)}
-                        >
-                            {/* Actions (Edit / Delete) - Show on Hover */}
-                            {hoveredMessageId === msg.id && editingMessageId !== msg.id && (
-                                <div style={{
-                                    display: 'flex',
-                                    gap: '0.5rem',
-                                    alignItems: 'center',
-                                    padding: '0 0.5rem',
-                                    // Position based on role
-                                    ...(msg.role === 'user' ? { marginRight: '0.5rem' } : { marginLeft: '0.5rem' }),
-                                    order: msg.role === 'user' ? -1 : 1, // Place before user msg, after AI msg
-                                    opacity: 0.7,
-                                    transition: 'opacity 0.2s',
-                                }}>
-                                    {/* Edit Button */}
-                                    <button
-                                        onClick={() => {
-                                            setEditingMessageId(msg.id);
-                                            setEditValue(msg.content);
-                                        }}
-                                        style={{
-                                            background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', padding: '0.2rem',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}
-                                        title={lang === 'ja' ? '編集' : 'Edit'}
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                        </svg>
-                                    </button>
-                                    {/* Delete Button */}
-                                    <button
-                                        onClick={() => {
-                                            if (confirm(lang === 'ja' ? 'このメッセージを削除しますか？' : 'Delete this message?')) {
-                                                deleteMessage(msg.id);
-                                            }
-                                        }}
-                                        style={{
-                                            background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.2rem',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}
-                                        title={lang === 'ja' ? '削除' : 'Delete'}
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="3 6 5 6 21 6"></polyline>
-                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                            )}
+                    {messages.map((msg) => {
+                        // Skip rendering empty messages that are purely function calls
+                        if (msg.role === 'ai' && !msg.content && msg.functionCall) {
+                            return null;
+                        }
 
-                            <div style={{
-                                width: editingMessageId === msg.id ? '100%' : 'auto',
-                                maxWidth: editingMessageId === msg.id ? '100%' : '70%',
-                                padding: '0.8rem 1.2rem',
-                                borderRadius: '12px',
-                                backgroundColor: msg.role === 'user' ? '#38bdf8' : 'rgba(255, 255, 255, 0.05)',
-                                color: msg.role === 'user' ? '#0f172a' : '#e2e8f0',
-                                borderTopRightRadius: msg.role === 'user' ? '2px' : '12px',
-                                borderTopLeftRadius: msg.role === 'ai' ? '2px' : '12px',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                            }}>
-                                {editingMessageId === msg.id ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
-                                        <textarea
-                                            value={editValue}
-                                            onChange={(e) => setEditValue(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Escape') {
-                                                    setEditingMessageId(null);
-                                                } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                                                    editMessage(msg.id, editValue);
-                                                    setEditingMessageId(null);
+                        // Style 'function' role messages as system logs
+                        if (msg.role === 'function' || msg.role === 'system') {
+                            return (
+                                <div key={msg.id} style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    margin: '0.5rem 0'
+                                }}>
+                                    <div style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        color: '#94a3b8',
+                                        padding: '0.4rem 1rem',
+                                        borderRadius: '16px',
+                                        fontSize: '0.8rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
+                                    }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                        </svg>
+                                        {msg.content}
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div
+                                key={msg.id}
+                                style={{
+                                    display: 'flex',
+                                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                                    position: 'relative'
+                                }}
+                                onMouseEnter={() => setHoveredMessageId(msg.id)}
+                                onMouseLeave={() => setHoveredMessageId(null)}
+                            >
+                                {/* Actions (Edit / Delete) - Show on Hover */}
+                                {hoveredMessageId === msg.id && editingMessageId !== msg.id && (
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '0.5rem',
+                                        alignItems: 'center',
+                                        padding: '0 0.5rem',
+                                        // Position based on role
+                                        ...(msg.role === 'user' ? { marginRight: '0.5rem' } : { marginLeft: '0.5rem' }),
+                                        order: msg.role === 'user' ? -1 : 1, // Place before user msg, after AI msg
+                                        opacity: 0.7,
+                                        transition: 'opacity 0.2s',
+                                    }}>
+                                        {/* Edit Button */}
+                                        <button
+                                            onClick={() => {
+                                                setEditingMessageId(msg.id);
+                                                setEditValue(msg.content);
+                                            }}
+                                            style={{
+                                                background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', padding: '0.2rem',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}
+                                            title={lang === 'ja' ? '編集' : 'Edit'}
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            </svg>
+                                        </button>
+                                        {/* Delete Button */}
+                                        <button
+                                            onClick={() => {
+                                                if (confirm(lang === 'ja' ? 'このメッセージを削除しますか？' : 'Delete this message?')) {
+                                                    deleteMessage(msg.id);
                                                 }
                                             }}
                                             style={{
-                                                width: '100%',
-                                                minHeight: '60px',
-                                                backgroundColor: 'rgba(0,0,0,0.2)',
-                                                border: '1px solid rgba(255,255,255,0.2)',
-                                                borderRadius: '4px',
-                                                color: msg.role === 'user' ? '#0f172a' : '#e2e8f0',
-                                                padding: '0.5rem',
-                                                resize: 'vertical',
-                                                outline: 'none',
-                                                fontFamily: 'inherit',
-                                                fontSize: 'inherit'
+                                                background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.2rem',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
                                             }}
-                                            autoFocus
-                                        />
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                            <button
-                                                onClick={() => setEditingMessageId(null)}
-                                                style={{ background: 'transparent', border: 'none', color: msg.role === 'user' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.8rem' }}
-                                            >
-                                                {lang === 'ja' ? 'キャンセル (Esc)' : 'Cancel (Esc)'}
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    editMessage(msg.id, editValue);
-                                                    setEditingMessageId(null);
-                                                }}
-                                                style={{ background: msg.role === 'user' ? '#0f172a' : '#38bdf8', color: msg.role === 'user' ? '#38bdf8' : '#0f172a', border: 'none', borderRadius: '4px', padding: '0.2rem 0.8rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
-                                            >
-                                                {lang === 'ja' ? '保存 (Ctrl+Enter)' : 'Save (Ctrl+Enter)'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                        {msg.content}
+                                            title={lang === 'ja' ? '削除' : 'Delete'}
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg>
+                                        </button>
                                     </div>
                                 )}
+
+                                <div style={{
+                                    width: editingMessageId === msg.id ? '100%' : 'auto',
+                                    maxWidth: editingMessageId === msg.id ? '100%' : '70%',
+                                    padding: '0.8rem 1.2rem',
+                                    borderRadius: '12px',
+                                    backgroundColor: msg.role === 'user' ? '#38bdf8' : 'rgba(255, 255, 255, 0.05)',
+                                    color: msg.role === 'user' ? '#0f172a' : '#e2e8f0',
+                                    borderTopRightRadius: msg.role === 'user' ? '2px' : '12px',
+                                    borderTopLeftRadius: msg.role === 'ai' ? '2px' : '12px',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                }}>
+                                    {editingMessageId === msg.id ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                                            <textarea
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Escape') {
+                                                        setEditingMessageId(null);
+                                                    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                                        editMessage(msg.id, editValue);
+                                                        setEditingMessageId(null);
+                                                    }
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    minHeight: '60px',
+                                                    backgroundColor: 'rgba(0,0,0,0.2)',
+                                                    border: '1px solid rgba(255,255,255,0.2)',
+                                                    borderRadius: '4px',
+                                                    color: msg.role === 'user' ? '#0f172a' : '#e2e8f0',
+                                                    padding: '0.5rem',
+                                                    resize: 'vertical',
+                                                    outline: 'none',
+                                                    fontFamily: 'inherit',
+                                                    fontSize: 'inherit'
+                                                }}
+                                                autoFocus
+                                            />
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                                <button
+                                                    onClick={() => setEditingMessageId(null)}
+                                                    style={{ background: 'transparent', border: 'none', color: msg.role === 'user' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                >
+                                                    {lang === 'ja' ? 'キャンセル (Esc)' : 'Cancel (Esc)'}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        editMessage(msg.id, editValue);
+                                                        setEditingMessageId(null);
+                                                    }}
+                                                    style={{ background: msg.role === 'user' ? '#0f172a' : '#38bdf8', color: msg.role === 'user' ? '#38bdf8' : '#0f172a', border: 'none', borderRadius: '4px', padding: '0.2rem 0.8rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+                                                >
+                                                    {lang === 'ja' ? '保存 (Ctrl+Enter)' : 'Save (Ctrl+Enter)'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            {msg.content}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
 
                     {/* Typing Indicator */}
                     {isTyping && (

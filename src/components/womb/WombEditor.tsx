@@ -11,6 +11,7 @@ interface WombEditorProps {
     onSave: () => void;
     onOpenFileList: () => void;
     onNewStory: () => void;
+    showWombDebugInfo?: boolean;
 }
 
 export const WombEditor: React.FC<WombEditorProps> = ({
@@ -21,7 +22,8 @@ export const WombEditor: React.FC<WombEditorProps> = ({
     isGenerating,
     onSave,
     onOpenFileList,
-    onNewStory
+    onNewStory,
+    showWombDebugInfo
 }) => {
     const editorRef = useRef<any>(null); // Monaco editor instance
     const monaco = useMonaco();
@@ -86,6 +88,8 @@ export const WombEditor: React.FC<WombEditorProps> = ({
 
 
     const [paddingLeft, setPaddingLeft] = useState(60); // Default approximation
+    const [testViewZoneId, setTestViewZoneId] = useState<string | null>(null); // For test view zone
+    const resizeObserverRef = useRef<ResizeObserver | null>(null); // To keep track and disconnect
 
     const handleEditorDidMount = (editor: any) => {
         editorRef.current = editor;
@@ -109,6 +113,35 @@ export const WombEditor: React.FC<WombEditorProps> = ({
         setContent(value || '');
     };
 
+    // --- Listen for Insert Instruction Events from CORD ---
+    useEffect(() => {
+        const handleInsertInstruction = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const instructionText = customEvent.detail?.instructionText;
+
+            if (instructionText && editorRef.current) {
+                const editor = editorRef.current;
+                const selection = editor.getSelection();
+
+                // Format the instruction with region markers
+                const regionTemplate = `\n#region AI_INSTRUCTION\n// ${instructionText.split('\n').join('\n// ')}\n#endregion\n`;
+
+                // Insert text at cursor
+                const op = { range: selection, text: regionTemplate, forceMoveMarkers: true };
+                editor.executeEdits("insert-instruction", [op]);
+
+                // Focus back
+                editor.focus();
+            }
+        };
+
+        window.addEventListener('womb:insert-instruction', handleInsertInstruction);
+
+        return () => {
+            window.removeEventListener('womb:insert-instruction', handleInsertInstruction);
+        };
+    }, []);
+
     const handleInsertRegion = () => {
         if (!editorRef.current) return;
 
@@ -123,6 +156,87 @@ export const WombEditor: React.FC<WombEditorProps> = ({
 
         // Focus back
         editor.focus();
+    };
+
+    const handleToggleTestViewZone = () => {
+        if (!editorRef.current) return;
+        const editor = editorRef.current;
+
+        editor.changeViewZones(function (changeAccessor: any) {
+            if (testViewZoneId) {
+                // Remove existing
+                changeAccessor.removeZone(testViewZoneId);
+                setTestViewZoneId(null);
+
+                // Disconnect observer when removing the zone
+                if (resizeObserverRef.current) {
+                    resizeObserverRef.current.disconnect();
+                    resizeObserverRef.current = null;
+                }
+            } else {
+                // Add new
+                const domNode = document.createElement('div');
+                // The outer domNode is heavily manipulated by Monaco (absolute positioning, fixed height).
+                // We leave its styling minimal and mostly let Monaco handle it.
+                domNode.style.zIndex = '10';
+
+                // Create an inner wrapper that will naturally expand to fit the text.
+                // We will apply all the visual styles here.
+                const innerDiv = document.createElement('div');
+                innerDiv.style.background = 'rgba(74, 222, 128, 0.1)'; // green-400 with opacity
+                innerDiv.style.borderLeft = '4px solid #4ade80';
+                innerDiv.style.padding = '8px 16px';
+                innerDiv.style.color = '#e2e8f0';
+                innerDiv.style.fontFamily = 'monospace';
+                innerDiv.style.fontSize = '14px';
+                innerDiv.style.boxSizing = 'border-box';
+                // Important: let the inner div grow naturally
+                innerDiv.style.height = 'max-content';
+                innerDiv.style.overflow = 'hidden';
+
+                const contentText = '🤖 [AI Thought Process]\n・文脈を解析中...\n・View Zoneのテスト表示です。\n・この領域はユーザーが直接編集することはできません。\n・要素自体の高さで自動調整されています。';
+                innerDiv.innerText = contentText;
+
+                // Append inner wrapper to the outer node
+                domNode.appendChild(innerDiv);
+
+                const selection = editor.getSelection();
+                // Insert after the current line, or line 1 if no selection
+                const afterLineNumber = selection ? selection.positionLineNumber : 1;
+
+                // Create the ViewZone object. Monaco retains a reference to this object,
+                // so we can mutate its properties (like heightInPx) before calling layoutZone.
+                const viewZone = {
+                    afterLineNumber: afterLineNumber,
+                    heightInPx: 100, // Initial dummy height
+                    domNode: domNode,
+                };
+
+                const id = changeAccessor.addZone(viewZone);
+                setTestViewZoneId(id);
+
+                // Set up ResizeObserver to watch the *INNER* element's actual rendered height
+                const observer = new ResizeObserver((entries) => {
+                    for (let entry of entries) {
+                        // Math.ceil ensures we never cut off sub-pixels
+                        const pixelHeight = Math.ceil(entry.target.getBoundingClientRect().height);
+
+                        // If height changed, update the original viewZone object and tell Monaco to re-layout
+                        if (viewZone.heightInPx !== pixelHeight) {
+                            viewZone.heightInPx = pixelHeight;
+
+                            editor.changeViewZones((accessor: any) => {
+                                accessor.layoutZone(id);
+                            });
+                        }
+                    }
+                });
+
+                // Start observing the INNER created node
+                observer.observe(innerDiv);
+                resizeObserverRef.current = observer;
+            }
+        });
     };
 
     return (
@@ -167,6 +281,19 @@ export const WombEditor: React.FC<WombEditorProps> = ({
 
                 {/* Document Actions */}
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {showWombDebugInfo && (
+                        <TooltipButton
+                            label="Toggle Test ViewZone"
+                            onClick={handleToggleTestViewZone}
+                            icon={
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a2 2 0 0 0 1.808 2.95h10.944a2 2 0 0 0 1.808-2.95l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
+                                    <path d="M8.5 2h7" />
+                                    <path d="M7 16h10" />
+                                </svg>
+                            }
+                        />
+                    )}
                     <TooltipButton
                         label="Insert AI Instruction"
                         onClick={handleInsertRegion}
@@ -236,7 +363,7 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                         overviewRulerBorder: false,
                         matchBrackets: 'never',
                         renderValidationDecorations: 'off',
-                        
+
                         // Disable word highlighting
                         occurrencesHighlight: 'off',
                         selectionHighlight: false

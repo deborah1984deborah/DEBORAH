@@ -89,7 +89,8 @@ export interface ChatSession {
 export interface ChatMessage {
     id: string;
     sessionId: string;
-    role: 'user' | 'ai' | 'system'; // Added 'system' for future flexibility
+    role: 'user' | 'ai' | 'system' | 'function'; // Added function role
     content: string;
     createdAt: number;
+    functionCall?: any; // Added for Tool Calling
 }

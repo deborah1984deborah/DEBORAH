@@ -55,12 +55,48 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         handleAddHistory,
         handleUpdateHistory,
         handleSaveHistory,
+        handleAddFullHistory,
         handleDeleteHistory,
         handleNewStory,
         handleSelectStory,
         buildWombContext,
         displayTitle
     } = useWombSystem({ lang });
+
+    // Listen to CORD's command to add history
+    React.useEffect(() => {
+        console.log("[WombSystem] useEffect for womb:add-history mounted");
+        const handleAddWombHistoryEvent = (e: Event) => {
+            const customEvent = e as CustomEvent<{ entityId: string, historyText: string }>;
+            const { entityId, historyText } = customEvent.detail;
+
+            console.log(`[WombSystem] Event received! womb:add-history`, { entityId, historyText });
+
+            if (!entityId || !historyText) {
+                console.error("[WombSystem] Missing data in event!", { entityId, historyText });
+                alert(`[System Error] CORDからの指示に不足があります。\nEntityID: ${entityId}\nText: ${historyText ? "あり" : "なし"}`);
+                return;
+            }
+
+            // Strict Validation: Ensure the entityId exists in the full Lorebook database
+            const allLoreIds = [...mommyList, ...nerdList, ...loreList].map(item => item.id);
+            if (!allLoreIds.includes(entityId)) {
+                console.error(`[WombSystem] Entity ID "${entityId}" could not be found in the Lorebook.`);
+                alert(`[System Error] 指定されたキャラクターが見つかりません。CORDが架空のキャラクター名を作り出したか、データベースに存在しない可能性があります。`);
+                return; // Stop the save process
+            }
+
+            // Auto add history and save using the safe atomic draft-save flow
+            console.log("[WombSystem] Calling handleAddFullHistory...");
+            handleAddFullHistory(entityId, historyText);
+        };
+
+        window.addEventListener('womb:add-history', handleAddWombHistoryEvent);
+        return () => {
+            console.log("[WombSystem] useEffect for womb:add-history unmounted");
+            window.removeEventListener('womb:add-history', handleAddWombHistoryEvent);
+        }
+    }, [handleAddFullHistory, mommyList, nerdList, loreList]);
 
     // State to track which debug panel is functionally in front
     const [activeDebugPanel, setActiveDebugPanel] = useState<'womb' | 'cord'>('womb');
@@ -108,6 +144,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     onSave={handleSave}
                     onOpenFileList={() => setShowFileList(true)}
                     onNewStory={handleNewStory}
+                    showWombDebugInfo={showWombDebugInfo}
                 />
 
                 {/* CORD: Chat Interface (Right) */}
