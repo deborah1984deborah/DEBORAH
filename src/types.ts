@@ -50,10 +50,19 @@ export type LoreItem = Fuckmeat | Penis | Lore;
 
 
 // Story Interface
+export interface StoryVersion {
+    id: string; // Unique ID for this version (e.g., v_timestamp)
+    parentId: string | null; // ID of the version this branched from (null for initial)
+    content: string; // The text content at this version
+    savedAt: number; // Timestamp of save
+    saveType: 'manual' | 'generate_pre' | 'generate_post'; // How this version was created
+}
+
 export interface Story {
     id: string;
     title: string;
-    content: string;
+    currentVersionId: string; // The active version being edited/viewed
+    versions: StoryVersion[]; // All versions of this story
     createdAt: number;
     updatedAt: number;
 }

@@ -12,6 +12,11 @@ interface WombEditorProps {
     onManualSave?: () => void;
     onOpenFileList: () => void;
     onNewStory: () => void;
+    onUndo?: () => void;
+    onRedo?: () => void;
+    canUndo?: boolean;
+    canRedo?: boolean;
+    redoBranchCount?: number;
     showWombDebugInfo?: boolean;
     isCordProcessing?: boolean;
 }
@@ -26,6 +31,11 @@ export const WombEditor: React.FC<WombEditorProps> = ({
     onManualSave,
     onOpenFileList,
     onNewStory,
+    onUndo,
+    onRedo,
+    canUndo,
+    canRedo,
+    redoBranchCount = 0,
     showWombDebugInfo,
     isCordProcessing
 }) => {
@@ -482,64 +492,169 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                 )}
             </div>
 
-            {/* GENERATE BUTTON */}
-            <button
-                onClick={onSave}
-                disabled={isLocked}
-                style={{
-                    position: 'absolute',
-                    bottom: '1.5rem',
-                    right: '1.5rem',
-                    backgroundColor: isLocked ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(5px)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    borderRadius: '30px',
-                    color: isGenerating ? 'rgba(255, 255, 255, 0.5)' : 'white',
-                    padding: '0.5rem 1.5rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 'bold',
-                    letterSpacing: '0.1em',
-                    cursor: isGenerating ? 'wait' : 'pointer',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    boxShadow: isLocked ? 'none' : '0 4px 15px rgba(0, 0, 0, 0.3)',
-                    zIndex: 10 // Ensure above editor
-                }}
-                onMouseEnter={(e) => {
-                    if (!isLocked) {
-                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-                        e.currentTarget.style.borderColor = 'white';
-                        e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.3)';
-                    }
-                }}
-                onMouseLeave={(e) => {
-                    if (!isLocked) {
-                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
-                    }
-                }}
-            >
-                {isLocked ? (
-                    <>
-                        <span style={{
-                            display: 'inline-block',
-                            width: '8px',
-                            height: '8px',
-                            backgroundColor: 'white',
+            {/* Editor Action Buttons (Undo/Redo & Generate) */}
+            <div style={{
+                position: 'absolute',
+                bottom: '1.5rem',
+                right: '1.5rem',
+                display: 'flex',
+                gap: '0.75rem',
+                zIndex: 10
+            }}>
+                {/* UNDO BUTTON */}
+                <button
+                    onClick={onUndo}
+                    disabled={!canUndo || isLocked}
+                    title="Undo"
+                    style={{
+                        background: 'none', // Remove background
+                        border: 'none', // Remove border
+                        color: (!canUndo || isLocked) ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.7)', // Dimmer color
+                        width: '32px', // Slightly smaller hit area
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: (!canUndo || isLocked) ? 'default' : 'pointer', // Change cursor
+                        transition: 'all 0.2s ease',
+                        padding: 0 // Remove padding
+                    }}
+                    onMouseEnter={(e) => {
+                        if (canUndo && !isLocked) {
+                            e.currentTarget.style.color = 'white'; // Highlight on hover
+                            e.currentTarget.style.transform = 'scale(1.1)'; // Slight scale effect
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (canUndo && !isLocked) {
+                            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'; // Revert
+                            e.currentTarget.style.transform = 'scale(1)'; // Revert scale
+                        }
+                    }}
+                >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 7v6h6" />
+                        <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+                    </svg>
+                </button>
+
+                {/* REDO BUTTON */}
+                <button
+                    onClick={onRedo}
+                    disabled={!canRedo || isLocked}
+                    title="Redo"
+                    style={{
+                        background: 'none', // Remove background
+                        border: 'none', // Remove border
+                        color: (!canRedo || isLocked) ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.7)', // Dimmer color
+                        width: '32px', // Slightly smaller hit area
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: (!canRedo || isLocked) ? 'default' : 'pointer', // Change cursor
+                        transition: 'all 0.2s ease',
+                        padding: 0, // Remove padding
+                        position: 'relative' // Anchor for absolute positioned badge
+                    }}
+                    onMouseEnter={(e) => {
+                        if (canRedo && !isLocked) {
+                            e.currentTarget.style.color = 'white'; // Highlight on hover
+                            e.currentTarget.style.transform = 'scale(1.1)'; // Slight scale effect
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (canRedo && !isLocked) {
+                            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'; // Revert
+                            e.currentTarget.style.transform = 'scale(1)'; // Revert scale
+                        }
+                    }}
+                >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 7v6h-6" />
+                        <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
+                    </svg>
+
+                    {/* REDO BADGE NOTIFICATION */}
+                    {redoBranchCount > 1 && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '-4px',
+                            right: '-4px',
+                            backgroundColor: '#ef4444', // Red-500
+                            color: 'white',
+                            fontSize: '0.6rem',
+                            fontWeight: 'bold',
+                            width: '16px',
+                            height: '16px',
                             borderRadius: '50%',
-                            animation: 'pulse 1s infinite'
-                        }} />
-                        SAVING...
-                    </>
-                ) : (
-                    <>
-                        <span style={{ fontSize: '1.1em' }}>✧</span> GENERATE
-                    </>
-                )}
-            </button>
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 0 5px rgba(239, 68, 68, 0.5)',
+                            pointerEvents: 'none' // Don't block clicks
+                        }}>
+                            {redoBranchCount}
+                        </div>
+                    )}
+                </button>
+
+                {/* GENERATE BUTTON */}
+                <button
+                    onClick={onSave}
+                    disabled={isLocked}
+                    style={{
+                        marginLeft: '0.5rem', // Added some distance from the icons
+                        backgroundColor: isLocked ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                        backdropFilter: 'blur(5px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        borderRadius: '30px',
+                        color: isGenerating ? 'rgba(255, 255, 255, 0.5)' : 'white',
+                        padding: '0.5rem 1.5rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 'bold',
+                        letterSpacing: '0.1em',
+                        cursor: isLocked ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.3s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        boxShadow: isLocked ? 'none' : '0 4px 15px rgba(0, 0, 0, 0.3)',
+                    }}
+                    onMouseEnter={(e) => {
+                        if (!isLocked) {
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+                            e.currentTarget.style.borderColor = 'white';
+                            e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.3)';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (!isLocked) {
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
+                        }
+                    }}
+                >
+                    {isLocked ? (
+                        <>
+                            <span style={{
+                                display: 'inline-block',
+                                width: '8px',
+                                height: '8px',
+                                backgroundColor: 'white',
+                                borderRadius: '50%',
+                                animation: 'pulse 1s infinite'
+                            }} />
+                            SAVING...
+                        </>
+                    ) : (
+                        <>
+                            <span style={{ fontSize: '1.1em' }}>✧</span> GENERATE
+                        </>
+                    )}
+                </button>
+            </div>
             <style>
                 {`
                     @keyframes pulse {

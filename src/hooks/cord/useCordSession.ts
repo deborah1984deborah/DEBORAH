@@ -1,0 +1,180 @@
+import { useState, useEffect } from 'react';
+import { ChatSession, ChatMessage } from '../../types';
+import { ChatMessageData } from '../../utils/gemini';
+
+const STORAGE_KEY_SESSIONS = 'cord_chat_sessions';
+const STORAGE_KEY_MESSAGES_PREFIX = 'cord_chat_messages_';
+
+export const useCordSession = (currentStoryId?: string) => {
+    const [sessions, setSessions] = useState<ChatSession[]>([]);
+    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+    // Default chat scope preference
+    const [chatScope, setChatScope] = useState<'global' | 'story'>('story');
+
+    // 1. Load Sessions on Mount
+    useEffect(() => {
+        const storedSessions = localStorage.getItem(STORAGE_KEY_SESSIONS);
+        if (storedSessions) {
+            setSessions(JSON.parse(storedSessions));
+        }
+    }, []);
+
+    // 2. Load Messages when Session Changes
+    useEffect(() => {
+        if (!currentSessionId) {
+            setMessages([]);
+            return;
+        }
+
+        const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + currentSessionId);
+        if (storedMessages) {
+            setMessages(JSON.parse(storedMessages));
+        } else {
+            setMessages([]);
+        }
+    }, [currentSessionId]);
+
+    // Helper: Save Sessions to LocalStorage
+    const saveSessionsToStorage = (updatedSessions: ChatSession[]) => {
+        localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(updatedSessions));
+        setSessions(updatedSessions);
+    };
+
+    // Action: Start New Session (View Reset Only)
+    const startNewSession = () => {
+        setCurrentSessionId(null);
+        setMessages([]);
+    };
+
+    // Action: Add Message (Handles Validation & Saving locally)
+    const addMessage = (role: 'user' | 'ai' | 'system' | 'function', content: string, sessionIdOverride?: string, functionCall?: any, rawParts?: any[]) => {
+        // ALWAYS read from localStorage first to prevent closure staleness during async calls
+        const storedSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
+        let currentSessions: ChatSession[] = storedSessionsStr ? JSON.parse(storedSessionsStr) : sessions;
+
+        let activeSessionId = sessionIdOverride || currentSessionId;
+
+        // 1. If no session is active, create one NOW
+        if (!activeSessionId) {
+            const isGlobalScope = chatScope === 'global';
+
+            const newSession: ChatSession = {
+                id: Date.now().toString(),
+                title: 'New Chat',
+                storyId: isGlobalScope ? undefined : currentStoryId,
+                isGlobal: isGlobalScope,
+                isAwareOfWombStory: !isGlobalScope, // Explicitly set Context awareness
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+
+            // Update local list
+            currentSessions = [newSession, ...currentSessions];
+            activeSessionId = newSession.id;
+            setCurrentSessionId(activeSessionId);
+
+            // Initialize message storage for this new session
+            localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + newSession.id, JSON.stringify([]));
+        }
+
+        // 2. Create the message object
+        const newMessage: ChatMessageData & { id: string; sessionId: string; createdAt: number } = {
+            id: Date.now().toString(),
+            sessionId: activeSessionId!,
+            role,
+            content,
+            createdAt: Date.now(),
+            functionCall,
+            rawParts
+        };
+
+        // 3. Save Message: Read FRESH from local storage
+        const storedMessagesStr = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + activeSessionId!);
+        let currentMessages: ChatMessage[] = [];
+        if (storedMessagesStr) {
+            currentMessages = JSON.parse(storedMessagesStr);
+        } else if (activeSessionId === currentSessionId) {
+            currentMessages = messages; // Fallback only if it's the current view
+        }
+
+        const updatedMessages = [...currentMessages, newMessage];
+
+        localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + activeSessionId!, JSON.stringify(updatedMessages));
+
+        if (!currentSessionId || currentSessionId === activeSessionId) {
+            setMessages(updatedMessages);
+        }
+
+        // 4. Update Session Timestamp & Save Sessions 
+        const updatedSessions = currentSessions.map(s =>
+            s.id === activeSessionId ? { ...s, updatedAt: Date.now() } : s
+        );
+        saveSessionsToStorage(updatedSessions);
+
+        return activeSessionId;
+    };
+
+    // Action: Delete Session
+    const deleteSession = (sessionId: string) => {
+        const updatedSessions = sessions.filter(s => s.id !== sessionId);
+        setSessions(updatedSessions);
+        saveSessionsToStorage(updatedSessions);
+        localStorage.removeItem(STORAGE_KEY_MESSAGES_PREFIX + sessionId);
+        if (currentSessionId === sessionId) {
+            setCurrentSessionId(null);
+            setMessages([]);
+        }
+    };
+
+    // Action: Toggle WOMB Awareness
+    const toggleWombAwareness = (sessionId: string, isAware: boolean) => {
+        const storedSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
+        let currentSessions: ChatSession[] = storedSessionsStr ? JSON.parse(storedSessionsStr) : sessions;
+
+        const updatedSessions = currentSessions.map(s =>
+            s.id === sessionId ? { ...s, isAwareOfWombStory: isAware } : s
+        );
+        saveSessionsToStorage(updatedSessions);
+    };
+
+    // Action: Edit Message
+    const editMessage = (messageId: string, newContent: string) => {
+        if (!currentSessionId) return;
+
+        const updatedMessages = messages.map(msg =>
+            msg.id === messageId ? { ...msg, content: newContent } : msg
+        );
+
+        setMessages(updatedMessages);
+        localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + currentSessionId, JSON.stringify(updatedMessages));
+    };
+
+    // Action: Delete Message
+    const deleteMessage = (messageId: string) => {
+        if (!currentSessionId) return;
+
+        const updatedMessages = messages.filter(msg => msg.id !== messageId);
+        setMessages(updatedMessages);
+        localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + currentSessionId, JSON.stringify(updatedMessages));
+    };
+
+    return {
+        sessions,
+        currentSessionId,
+        setCurrentSessionId,
+        messages,
+        chatScope,
+        setChatScope,
+        startNewSession,
+        addMessage,
+        deleteSession,
+        editMessage,
+        deleteMessage,
+        toggleWombAwareness,
+        saveSessionsToStorage,
+        STORAGE_KEY_SESSIONS,
+        STORAGE_KEY_MESSAGES_PREFIX
+    };
+};

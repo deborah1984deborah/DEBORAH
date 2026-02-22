@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TooltipButton } from '../shared/TooltipButton';
-import { useCordChat } from '../../hooks/useCordChat';
+import { useCordChat } from '../../hooks/cord/useCordChat';
 import { CordSessionModal } from './CordSessionModal';
 
 interface CordChatProps {
@@ -85,7 +85,7 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
 
         // 2. Trigger AI Response
         if (activeSessionId) {
-            generateAiResponse(activeSessionId, apiKey, aiModel, lang, getWombContext);
+            generateAiResponse(activeSessionId, apiKey, aiModel, getWombContext);
         }
     };
 

@@ -13,7 +13,8 @@ import { WombHeader } from './WombHeader';
 import { WombEditor } from './WombEditor';
 import { WombDebugPanel } from './WombDebugPanel';
 import { CordDebugPanel } from './CordDebugPanel';
-import { useWombSystem } from '../../hooks/useWombSystem';
+import { BranchSelectorModal } from './BranchSelectorModal';
+import { useWombSystem } from '../../hooks/womb/useWombSystem';
 
 
 
@@ -60,8 +61,17 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         handleDeleteHistory,
         handleNewStory,
         handleSelectStory,
+        handleUndo,
+        handleRedo,
+        canUndo,
+        canRedo,
+        redoBranchCount,
         buildWombContext,
-        displayTitle
+        displayTitle,
+        redoCandidates,
+        setRedoCandidates,
+        handleSelectRedoBranch,
+        currentStoryVersions
     } = useWombSystem({ lang });
 
     // Listen to CORD's command to add history
@@ -186,6 +196,11 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     onManualSave={handleManualSave}
                     onOpenFileList={() => setShowFileList(true)}
                     onNewStory={handleNewStory}
+                    onUndo={handleUndo}
+                    onRedo={handleRedo}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    redoBranchCount={redoBranchCount}
                     showWombDebugInfo={showWombDebugInfo}
                     isCordProcessing={isCordProcessing}
                 />
@@ -351,6 +366,17 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                 isActive={activeDebugPanel === 'womb'}
                 onClick={() => setActiveDebugPanel('womb')}
             />
+
+            {/* REDO BRANCH SELECTOR MODAL */}
+            {redoCandidates && redoCandidates.length > 0 && (
+                <BranchSelectorModal
+                    lang={lang}
+                    candidates={redoCandidates}
+                    versions={currentStoryVersions}
+                    onSelect={handleSelectRedoBranch}
+                    onClose={() => setRedoCandidates([])}
+                />
+            )}
         </div>
     );
 };

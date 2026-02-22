@@ -1,140 +1,39 @@
-import { useState, useEffect } from 'react';
-import { ChatSession, ChatMessage } from '../types';
-import { ChatMessageData } from '../utils/gemini';
+import { useState } from 'react';
+import { ChatSession, ChatMessage } from '../../types';
+import { ChatMessageData } from '../../utils/gemini';
 
-const STORAGE_KEY_SESSIONS = 'cord_chat_sessions';
-const STORAGE_KEY_MESSAGES_PREFIX = 'cord_chat_messages_';
+interface UseCordGenerationProps {
+    lang: 'ja' | 'en';
+    sessions: ChatSession[];
+    messages: ChatMessage[];
+    addMessage: (role: 'user' | 'ai' | 'system' | 'function', content: string, sessionIdOverride?: string, functionCall?: any, rawParts?: any[]) => string;
+    cordDebug: {
+        setCordDebugSystemPrompt: (v: string) => void;
+        setCordDebugInputText: (v: string) => void;
+        setCordDebugMatchedEntities: (v: any[]) => void;
+    };
+    STORAGE_KEY_SESSIONS: string;
+    STORAGE_KEY_MESSAGES_PREFIX: string;
+    saveSessionsToStorage: (updatedSessions: ChatSession[]) => void;
+}
 
-export const useCordChat = (currentStoryId?: string) => {
-    const [sessions, setSessions] = useState<ChatSession[]>([]);
-    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+export const useCordGeneration = ({
+    lang,
+    sessions,
+    messages,
+    addMessage,
+    cordDebug,
+    STORAGE_KEY_SESSIONS,
+    STORAGE_KEY_MESSAGES_PREFIX,
+    saveSessionsToStorage
+}: UseCordGenerationProps) => {
     const [isTyping, setIsTyping] = useState<boolean>(false);
 
-    // Default chat scope preference
-    const [chatScope, setChatScope] = useState<'global' | 'story'>('story');
-
-    // Debug State for CORD
-    const [cordDebugSystemPrompt, setCordDebugSystemPrompt] = useState<string>('');
-    const [cordDebugInputText, setCordDebugInputText] = useState<string>('');
-    const [cordDebugMatchedEntities, setCordDebugMatchedEntities] = useState<any[]>([]);
-
-    // 1. Load Sessions on Mount
-    useEffect(() => {
-        const storedSessions = localStorage.getItem(STORAGE_KEY_SESSIONS);
-        if (storedSessions) {
-            setSessions(JSON.parse(storedSessions));
-        }
-    }, []);
-
-    // 2. Load Messages when Session Changes
-    useEffect(() => {
-        if (!currentSessionId) {
-            setMessages([]);
-            return;
-        }
-
-        const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + currentSessionId);
-        if (storedMessages) {
-            setMessages(JSON.parse(storedMessages));
-        } else {
-            setMessages([]);
-        }
-    }, [currentSessionId]);
-
-    // Helper: Save Sessions to LocalStorage
-    const saveSessionsToStorage = (updatedSessions: ChatSession[]) => {
-        localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(updatedSessions));
-        setSessions(updatedSessions);
-    };
-
-
-
-    // Action: Start New Session (View Reset Only)
-    const startNewSession = () => {
-        setCurrentSessionId(null);
-        setMessages([]);
-    };
-
-    // Action: Add Message (Handles Validation & Saving locally)
-    const addMessage = (role: 'user' | 'ai' | 'system' | 'function', content: string, sessionIdOverride?: string, functionCall?: any, rawParts?: any[]) => {
-        // ALWAYS read from localStorage first to prevent closure staleness during async calls
-        const storedSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
-        let currentSessions: ChatSession[] = storedSessionsStr ? JSON.parse(storedSessionsStr) : sessions;
-
-        let activeSessionId = sessionIdOverride || currentSessionId;
-
-        // 1. If no session is active, create one NOW
-        if (!activeSessionId) {
-            // Determine scope based on user preference.
-            // DO NOT force global if !currentStoryId, because Draft mode needs context too.
-            const isGlobalScope = chatScope === 'global';
-
-            const newSession: ChatSession = {
-                id: Date.now().toString(),
-                title: 'New Chat',
-                storyId: isGlobalScope ? undefined : currentStoryId,
-                isGlobal: isGlobalScope,
-                isAwareOfWombStory: !isGlobalScope, // Explicitly set Context awareness
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            };
-
-            // Update local list
-            currentSessions = [newSession, ...currentSessions];
-            activeSessionId = newSession.id;
-            setCurrentSessionId(activeSessionId); // Note: this is async, but we use activeSessionId locally
-
-            // Initialize message storage for this new session
-            localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + newSession.id, JSON.stringify([]));
-        }
-
-        // 2. Create the message object
-        const newMessage: ChatMessageData & { id: string; sessionId: string; createdAt: number } = {
-            id: Date.now().toString(),
-            sessionId: activeSessionId!,
-            role,
-            content,
-            createdAt: Date.now(),
-            functionCall,
-            rawParts
-        };
-
-        // 3. Save Message: Read FRESH from local storage
-        const storedMessagesStr = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + activeSessionId!);
-        let currentMessages: ChatMessage[] = [];
-        if (storedMessagesStr) {
-            currentMessages = JSON.parse(storedMessagesStr);
-        } else if (activeSessionId === currentSessionId) {
-            currentMessages = messages; // Fallback only if it's the current view
-        }
-
-        const updatedMessages = [...currentMessages, newMessage];
-
-        localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + activeSessionId!, JSON.stringify(updatedMessages));
-
-        // Only update message state if we are currently viewing this session
-        // (Though usually we are, but just to be safe)
-        if (!currentSessionId || currentSessionId === activeSessionId) {
-            setMessages(updatedMessages);
-        }
-
-        // 4. Update Session Timestamp & Save Sessions 
-        const updatedSessions = currentSessions.map(s =>
-            s.id === activeSessionId ? { ...s, updatedAt: Date.now() } : s
-        );
-        saveSessionsToStorage(updatedSessions);
-
-        return activeSessionId; // Return ID in case caller needs to trigger AI immediately
-    };
-
     // Action: Generate AI Response
-    // We pass API details here because this hook doesn't own them
     const generateAiResponse = async (
         sessionId: string,
         apiKey: string,
         aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview',
-        lang: 'ja' | 'en',
         getWombContext?: () => Promise<{ systemInstruction: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>
     ) => {
         if (!apiKey) {
@@ -152,7 +51,7 @@ export const useCordChat = (currentStoryId?: string) => {
 
         setIsTyping(true);
         try {
-            const { callGeminiChat, callGemini } = await import('../utils/gemini');
+            const { callGeminiChat, callGemini } = await import('../../utils/gemini');
 
             // Get latest messages for this session from state/localStorage
             const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + sessionId);
@@ -185,7 +84,7 @@ export const useCordChat = (currentStoryId?: string) => {
                         }
 
                         // Set matched entities for debug panel
-                        setCordDebugMatchedEntities(wombContext.matchedLoreItems || []);
+                        cordDebug.setCordDebugMatchedEntities(wombContext.matchedLoreItems || []);
                     }
                 } catch (e) {
                     console.error("Failed to load WOMB context for CORD", e);
@@ -236,8 +135,8 @@ export const useCordChat = (currentStoryId?: string) => {
             }];
 
             // Update Debug State visually
-            setCordDebugSystemPrompt(systemPrompt);
-            setCordDebugInputText(JSON.stringify(currentMessages, null, 2));
+            cordDebug.setCordDebugSystemPrompt(systemPrompt);
+            cordDebug.setCordDebugInputText(JSON.stringify(currentMessages, null, 2));
 
             // Call Chat API
             const response = await callGeminiChat(apiKey, currentMessages as any, aiModel, systemPrompt, cordTools);
@@ -351,7 +250,7 @@ export const useCordChat = (currentStoryId?: string) => {
                                     functionLogMsg = `[System] Error: Ambiguous target. Multiple characters match the query "${entityQuery}".\nCandidates:\n${candidatesStr}\n\nPlease ask the user to clarify which ID they meant.`;
                                 } else {
                                     // Step 3-A: None found, do fallback approximate matching
-                                    const { getLevenshteinDistance } = await import('../utils/bison');
+                                    const { getLevenshteinDistance } = await import('../../utils/bison');
 
                                     const scoredItems = allItems.map((item: any) => ({
                                         item,
@@ -393,8 +292,6 @@ export const useCordChat = (currentStoryId?: string) => {
                         console.log(`[CORD Tool] womb:add-history resolution failed or ambiguous. Asking AI to confirm with user.`);
                     }
 
-
-
                     const funcCallMsg: ChatMessageData = {
                         role: 'ai',
                         content: '',
@@ -427,7 +324,6 @@ export const useCordChat = (currentStoryId?: string) => {
                 addMessage('ai', response, sessionId);
 
                 // --- Auto Titling Logic ---
-                // If this is the FIRST exchange (User asked something, AI replied, total 2 messages)
                 // Fetch fresh sessions from localStorage to avoid closure overwrite
                 const freshSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
                 const freshSessions: ChatSession[] = freshSessionsStr ? JSON.parse(freshSessionsStr) : sessions;
@@ -436,7 +332,7 @@ export const useCordChat = (currentStoryId?: string) => {
                     const sessionToUpdate = freshSessions.find(s => s.id === sessionId);
                     if (sessionToUpdate && sessionToUpdate.title === 'New Chat') {
                         try {
-                            // Prompt AI to generate a title with a suitable length limit, without restricting expression
+                            // Prompt AI to generate a title
                             const titlePrompt = lang === 'ja'
                                 ? `次のユーザーの入力を元に、このチャットのタイトルを20文字以内で作成してください。\n※「(〇〇文字)」のような文字数のカウントやカッコなどの補足情報は一切含めず、純粋なタイトル文字列のみを出力してください。\n\nユーザー入力: "${currentMessages[0].content}"`
                                 : `Create a title for this chat based on the following user input. Keep it under 20 characters.\n* Output ONLY the pure title string without quotes, parentheses, or character counts.\n\nUser input: "${currentMessages[0].content}"`;
@@ -467,77 +363,8 @@ export const useCordChat = (currentStoryId?: string) => {
         }
     };
 
-    // Action: Delete Session
-    const deleteSession = (sessionId: string) => {
-        // 1. Remove from sessions list
-        const updatedSessions = sessions.filter(s => s.id !== sessionId);
-        setSessions(updatedSessions);
-        saveSessionsToStorage(updatedSessions);
-
-        // 2. Remove messages for this session
-        localStorage.removeItem(STORAGE_KEY_MESSAGES_PREFIX + sessionId);
-
-        // 3. Reset View if current session was deleted
-        if (currentSessionId === sessionId) {
-            setCurrentSessionId(null);
-            setMessages([]);
-        }
-    };
-
-    // Action: Toggle WOMB Awareness
-    const toggleWombAwareness = (sessionId: string, isAware: boolean) => {
-        const storedSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
-        let currentSessions: ChatSession[] = storedSessionsStr ? JSON.parse(storedSessionsStr) : sessions;
-
-        const updatedSessions = currentSessions.map(s =>
-            s.id === sessionId ? { ...s, isAwareOfWombStory: isAware } : s
-        );
-        saveSessionsToStorage(updatedSessions);
-    };
-
-    // Action: Edit Message
-    const editMessage = (messageId: string, newContent: string) => {
-        if (!currentSessionId) return;
-
-        const updatedMessages = messages.map(msg =>
-            msg.id === messageId ? { ...msg, content: newContent } : msg
-        );
-
-        setMessages(updatedMessages);
-        localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + currentSessionId, JSON.stringify(updatedMessages));
-    };
-
-    // Action: Delete Message
-    const deleteMessage = (messageId: string) => {
-        if (!currentSessionId) return;
-
-        const updatedMessages = messages.filter(msg => msg.id !== messageId);
-
-        setMessages(updatedMessages);
-        localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + currentSessionId, JSON.stringify(updatedMessages));
-    };
-
     return {
-        sessions,
-        currentSessionId,
-        messages,
         isTyping,
-        setCurrentSessionId,
-        startNewSession, // Renamed from createNewSession
-        addMessage,
-        generateAiResponse,
-        deleteSession,
-        editMessage,
-        deleteMessage,
-        toggleWombAwareness,
-        chatScope,
-        setChatScope,
-        cordDebugSystemPrompt,
-        cordDebugInputText,
-        cordDebugMatchedEntities,
-        // Filter helper
-        filteredSessions: sessions.filter(s =>
-            s.isGlobal || (currentStoryId && s.storyId === currentStoryId)
-        )
+        generateAiResponse
     };
 };

@@ -1,101 +1,37 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Story, LoreItem, StoryLoreRelation, StoryEntityHistory } from '../types';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Story, LoreItem, StoryLoreRelation, StoryEntityHistory } from '../../types';
+import { useWombSettings } from './useWombSettings';
+import { useWombLore } from './useWombLore';
+import { useWombHistory } from './useWombHistory';
 
 interface UseWombSystemProps {
     lang: 'ja' | 'en';
 }
 
 export const useWombSystem = ({ lang }: UseWombSystemProps) => {
-    // --- STATE ---
+    // --- SUB-HOOKS COMPOSITION ---
+    const settings = useWombSettings();
+    const lore = useWombLore();
+    const history = useWombHistory();
 
-    // Settings State
-    const [wombOutputLength, setWombOutputLength] = useState<number>(() => {
-        const stored = localStorage.getItem('womb_output_length');
-        return stored ? Number(stored) : 1000;
-    });
-    const [cordOutputLength, setCordOutputLength] = useState<number>(() => {
-        const stored = localStorage.getItem('cord_output_length');
-        return stored ? Number(stored) : 300;
-    });
-    const [keywordScanRange, setKeywordScanRange] = useState<number>(() => {
-        const stored = localStorage.getItem('womb_keyword_scan_range');
-        // デフォルトは2000文字程度（直近の数シーン分）がコンテキストとして多すぎず少なすぎず適正。
-        return stored ? Number(stored) : 2000;
-    });
-    const [showSettings, setShowSettings] = useState<boolean>(false);
-    const [showDebugInfo, setShowDebugInfo] = useState<boolean>(() => {
-        const stored = localStorage.getItem('cord_debug_info');
-        return stored === 'true';
-    });
-    const [showWombDebugInfo, setShowWombDebugInfo] = useState<boolean>(() => {
-        const stored = localStorage.getItem('womb_debug_info');
-        return stored === 'true';
-    });
+    const {
+        apiKey, aiModel, keywordScanRange, showWombDebugInfo
+    } = settings;
 
-    // API Keys
-    const [apiKey, setApiKey] = useState<string>(''); // Gemini
-    // TMDB Access Token
-    const [tmdbAccessToken, setTmdbAccessToken] = useState<string>('');
+    const {
+        mommyList, nerdList, loreList,
+        activeMommyIds, setActiveMommyIds,
+        activeNerdIds, setActiveNerdIds,
+        activeLoreIds, setActiveLoreIds,
+        globalRelations, setGlobalRelations
+    } = lore;
 
-    // AI Model
-    const [aiModel, setAiModel] = useState<'gemini-2.5-flash' | 'gemini-3.1-pro-preview'>(() => {
-        const stored = localStorage.getItem('womb_ai_model');
-        return (stored as 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') || 'gemini-2.5-flash';
-    });
-
-    // Load API Keys on mount (localStorage > .env)
-    useEffect(() => {
-        // Gemini
-        const storedKey = localStorage.getItem('womb_gemini_api_key');
-        if (storedKey) {
-            setApiKey(storedKey);
-        } else {
-            const envKey = import.meta.env.VITE_GEMINI_API_KEY;
-            if (envKey) setApiKey(envKey);
-        }
-
-        // TMDB
-        const storedTmdbToken = localStorage.getItem('womb_tmdb_access_token');
-        if (storedTmdbToken) {
-            setTmdbAccessToken(storedTmdbToken);
-        } else {
-            const envTmdbToken = import.meta.env.VITE_TMDB_ACCESS_TOKEN;
-            if (envTmdbToken) setTmdbAccessToken(envTmdbToken);
-        }
-    }, []);
-
-    // Save API Keys when changed
-    useEffect(() => {
-        if (apiKey) localStorage.setItem('womb_gemini_api_key', apiKey);
-    }, [apiKey]);
-
-    useEffect(() => {
-        if (tmdbAccessToken) localStorage.setItem('womb_tmdb_access_token', tmdbAccessToken);
-    }, [tmdbAccessToken]);
-
-    useEffect(() => {
-        localStorage.setItem('womb_ai_model', aiModel);
-    }, [aiModel]);
-
-    useEffect(() => {
-        localStorage.setItem('womb_output_length', wombOutputLength.toString());
-    }, [wombOutputLength]);
-
-    useEffect(() => {
-        localStorage.setItem('cord_output_length', cordOutputLength.toString());
-    }, [cordOutputLength]);
-
-    useEffect(() => {
-        localStorage.setItem('womb_keyword_scan_range', keywordScanRange.toString());
-    }, [keywordScanRange]);
-
-    useEffect(() => {
-        localStorage.setItem('cord_debug_info', showDebugInfo.toString());
-    }, [showDebugInfo]);
-
-    useEffect(() => {
-        localStorage.setItem('womb_debug_info', showWombDebugInfo.toString());
-    }, [showWombDebugInfo]);
+    const {
+        historyLogs, setHistoryLogs,
+        handleAddHistory: baseHandleAddHistory,
+        handleUpdateHistory,
+        handleDeleteHistory
+    } = history;
 
     // Generation State
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -108,50 +44,26 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     // Story Management State
     const [currentStoryId, setCurrentStoryId] = useState<string | null>(null);
     const [content, setContent] = useState<string>("");
-
-    // Active Lore State for Current Story
-    const [activeMommyIds, setActiveMommyIds] = useState<string[]>([]);
-    const [activeNerdIds, setActiveNerdIds] = useState<string[]>([]);
-    const [activeLoreIds, setActiveLoreIds] = useState<string[]>([]);
+    const lastSavedContentRef = useRef<string>("");
 
     const [savedStories, setSavedStories] = useState<Story[]>([]);
     const [showFileList, setShowFileList] = useState<boolean>(false);
     const [showLorebook, setShowLorebook] = useState<boolean>(false);
 
-    // Lore Data (Loaded from main storage)
-    const [mommyList, setMommyList] = useState<LoreItem[]>([]);
-    const [nerdList, setNerdList] = useState<LoreItem[]>([]);
-    const [loreList, setLoreList] = useState<LoreItem[]>([]);
+    // Branch Selector State
+    const [redoCandidates, setRedoCandidates] = useState<{ id: string, versionId: string, previewText: string }[]>([]);
 
-    // Global Relations State (Join Table)
-    const [globalRelations, setGlobalRelations] = useState<StoryLoreRelation[]>([]);
+    // Load stories on mount (the rest are handled by sub-hooks)
+    useCallback(() => {
+        // Just for initial load
+    }, []);
 
-    // History State
-    const [historyLogs, setHistoryLogs] = useState<StoryEntityHistory[]>([]);
-
-    // --- EFFECTS ---
-
-    // Load stories and Lore data on mount
+    // Actually using useEffect instead of useCallback for mount
     useEffect(() => {
         const storedStories = localStorage.getItem('womb_stories');
         if (storedStories) {
             try { setSavedStories(JSON.parse(storedStories)); } catch (e) { console.error(e); }
         }
-
-        const storedMommy = localStorage.getItem('deborah_fuckmeat_v1');
-        if (storedMommy) { try { setMommyList(JSON.parse(storedMommy)); } catch (e) { console.error(e); } }
-
-        const storedNerd = localStorage.getItem('deborah_penis_v1');
-        if (storedNerd) { try { setNerdList(JSON.parse(storedNerd)); } catch (e) { console.error(e); } }
-
-        const storedLore = localStorage.getItem('deborah_lore_v1');
-        if (storedLore) { try { setLoreList(JSON.parse(storedLore)); } catch (e) { console.error(e); } }
-
-        const storedRelations = localStorage.getItem('womb_story_relations');
-        if (storedRelations) { try { setGlobalRelations(JSON.parse(storedRelations)); } catch (e) { console.error(e); } }
-
-        const storedHistory = localStorage.getItem('deborah_history_logs_v1');
-        if (storedHistory) { try { setHistoryLogs(JSON.parse(storedHistory)); } catch (e) { console.error(e); } }
     }, []);
 
     // --- ACTIONS ---
@@ -165,30 +77,54 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     }, []);
 
     // Core Story Save Logic
-    const saveStoryData = useCallback((currentId: string, currentContent: string, existingStories: Story[], now: number) => {
+    const saveStoryData = useCallback((
+        currentId: string,
+        currentContent: string,
+        saveType: 'manual' | 'generate_pre' | 'generate_post',
+        existingStories: Story[],
+        now: number
+    ) => {
         let newStories = [...existingStories];
         const derivedTitle = currentContent.split('\n')[0]?.trim() || "Untitled Story";
 
-        const storyData = {
-            title: derivedTitle,
-            content: currentContent,
-            updatedAt: now
-        };
-
         const existingStoryIndex = newStories.findIndex(s => s.id === currentId);
+        const newVersionId = "v_" + now.toString() + "_" + Math.random().toString(36).substr(2, 5);
 
         if (existingStoryIndex >= 0) {
             // Update existing
+            const existingStory = newStories[existingStoryIndex];
+            const newVersion = {
+                id: newVersionId,
+                parentId: existingStory.currentVersionId || null,
+                content: currentContent,
+                savedAt: now,
+                saveType: saveType
+            };
+
             newStories[existingStoryIndex] = {
-                ...newStories[existingStoryIndex],
-                ...storyData
+                ...existingStory,
+                title: derivedTitle,
+                currentVersionId: newVersionId,
+                versions: [...(existingStory.versions || []), newVersion],
+                updatedAt: now
             };
         } else {
-            // Create New (handle "ghost" stories or brand new ones)
+            // Create New
+            const newVersion = {
+                id: newVersionId,
+                parentId: null,
+                content: currentContent,
+                savedAt: now,
+                saveType: saveType
+            };
+
             const newStory: Story = {
                 id: currentId,
-                ...storyData,
-                createdAt: now
+                title: derivedTitle,
+                currentVersionId: newVersionId,
+                versions: [newVersion],
+                createdAt: now,
+                updatedAt: now
             };
             newStories.push(newStory);
         }
@@ -199,16 +135,22 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     const saveGlobalStoryState = useCallback((
         targetId: string,
         targetContent: string,
-        currentStories: Story[],
-        currentRelations: StoryLoreRelation[],
+        saveType: 'manual' | 'generate_pre' | 'generate_post',
         activeMommies: string[],
         activeNerds: string[],
         activeLores: string[]
     ) => {
         const now = Date.now();
+        // Always fetch latest to avoid stale closures, especially during async generate actions
+        const currentStories = JSON.parse(localStorage.getItem('womb_stories') || '[]') as Story[];
+        const currentRelations = JSON.parse(localStorage.getItem('womb_story_relations') || '[]') as StoryLoreRelation[];
+
         // 1. Save Story Data
-        const newStories = saveStoryData(targetId, targetContent, currentStories, now);
+        const newStories = saveStoryData(targetId, targetContent, saveType, currentStories, now);
         saveToLocalStorage(newStories);
+
+        // Update Ref to track changes
+        lastSavedContentRef.current = targetContent;
 
         // 2. Save Relations
         const otherRelations = currentRelations.filter(r => r.storyId !== targetId);
@@ -221,16 +163,13 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         setGlobalRelations(updatedGlobalRelations);
         localStorage.setItem('womb_story_relations', JSON.stringify(updatedGlobalRelations));
 
-        const derivedTitle = targetContent.split('\n')[0]?.trim() || "Untitled Story";
-        alert("System Saved: " + derivedTitle);
-
         return { newStories, updatedGlobalRelations };
     }, [saveStoryData, saveToLocalStorage]);
 
 
     // Helper: Build WOMB Context (Entities & Content)
     const buildWombContext = useCallback(async () => {
-        const { parseStoryContent } = await import('../utils/bison');
+        const { parseStoryContent } = await import('../../utils/bison');
         const cleanedContent = parseStoryContent(content);
 
         const scanTargetContent = cleanedContent.slice(-keywordScanRange);
@@ -317,7 +256,7 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
         setIsGenerating(true);
 
         try {
-            const { callGemini } = await import('../utils/gemini');
+            const { callGemini } = await import('../../utils/gemini');
 
             // Call the shared context builder
             const { systemInstruction, cleanedContent, matchedLoreItems } = await buildWombContext();
@@ -329,24 +268,36 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
                 setDebugMatchedEntities(matchedLoreItems);
             }
 
-            const generatedText = await callGemini(apiKey, cleanedContent, aiModel, systemInstruction);
-
-            // Append generated text
-            const newContent = content + '\n' + generatedText;
-            setContent(newContent);
-
             let newId = currentStoryId;
             if (!newId) {
                 newId = Date.now().toString();
                 setCurrentStoryId(newId);
             }
 
-            // Save via helper (Draft or Update)
+            // Save PRE-GEN if content changed
+            if (content !== lastSavedContentRef.current) {
+                saveGlobalStoryState(
+                    newId,
+                    content,
+                    'generate_pre',
+                    activeMommyIds,
+                    activeNerdIds,
+                    activeLoreIds
+                );
+            }
+
+            // Call the Gemeni API
+            const generatedText = await callGemini(apiKey, cleanedContent, aiModel, systemInstruction);
+
+            // Append generated text
+            const newContent = content + '\n' + generatedText;
+            setContent(newContent);
+
+            // Save POST-GEN via helper
             saveGlobalStoryState(
                 newId,
                 newContent,
-                savedStories,
-                globalRelations,
+                'generate_post',
                 activeMommyIds,
                 activeNerdIds,
                 activeLoreIds
@@ -377,8 +328,7 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
         saveGlobalStoryState(
             targetStoryId,
             content,
-            savedStories,
-            globalRelations,
+            'manual',
             activeMommyIds,
             activeNerdIds,
             activeLoreIds
@@ -429,32 +379,126 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
         }
     }, [savedStories, lang, globalRelations, currentStoryId, saveToLocalStorage, transitionToNewStory]);
 
+    // --- Version Control Handlers ---
+
+    // --- Version Control Handlers ---
+
+    // Helper to extract a minimal diff snippet for the Branch Selector
+    const computeDiffPreview = useCallback((oldContent: string, newContent: string): string => {
+        // Very basic diff: find first differing character
+        let diffIndex = 0;
+        const minLen = Math.min(oldContent.length, newContent.length);
+        while (diffIndex < minLen && oldContent[diffIndex] === newContent[diffIndex]) {
+            diffIndex++;
+        }
+
+        if (diffIndex === minLen && oldContent.length === newContent.length) {
+            return newContent.substring(0, 50) + "..."; // Identical?? Should rarely happen
+        }
+
+        // We want to show a bit of context BEFORE the change
+        const contextBefore = 10;
+        const contextAfter = 60; // How much of the NEW text to show
+
+        const startIndex = Math.max(0, diffIndex - contextBefore);
+        let preview = "...";
+
+        // Add tiny bit of prefix context
+        if (startIndex > 0) {
+            preview += newContent.substring(startIndex, diffIndex);
+        } else {
+            preview = newContent.substring(0, diffIndex);
+        }
+
+        // Add the changed snippet
+        preview += " {" + newContent.substring(diffIndex, diffIndex + contextAfter) + "} ...";
+
+        return preview;
+    }, []);
+
+    const handleUndo = useCallback(() => {
+        if (!currentStoryId) return;
+        const currentStory = savedStories.find(s => s.id === currentStoryId);
+        if (!currentStory || !currentStory.currentVersionId) return;
+
+        const currentVersion = currentStory.versions.find(v => v.id === currentStory.currentVersionId);
+        if (!currentVersion || !currentVersion.parentId) return;
+
+        const parentVersion = currentStory.versions.find(v => v.id === currentVersion.parentId);
+        if (!parentVersion) return;
+
+        const newStories = savedStories.map(s => {
+            if (s.id === currentStoryId) {
+                return { ...s, currentVersionId: parentVersion.id };
+            }
+            return s;
+        });
+
+        saveToLocalStorage(newStories);
+        setContent(parentVersion.content);
+        lastSavedContentRef.current = parentVersion.content;
+
+        // Clear redo candidates if pending
+        setRedoCandidates([]);
+    }, [currentStoryId, savedStories, saveToLocalStorage]);
+
+    const performRedoToVersion = useCallback((storyId: string, targetVersionId: string, targetContent: string) => {
+        const newStories = savedStories.map(s => {
+            if (s.id === storyId) {
+                return { ...s, currentVersionId: targetVersionId };
+            }
+            return s;
+        });
+
+        saveToLocalStorage(newStories);
+        setContent(targetContent);
+        lastSavedContentRef.current = targetContent;
+        setRedoCandidates([]); // Clear popup
+    }, [savedStories, saveToLocalStorage]);
+
+
+    const handleRedo = useCallback(() => {
+        if (!currentStoryId) return;
+        const currentStory = savedStories.find(s => s.id === currentStoryId);
+        if (!currentStory || !currentStory.currentVersionId) return;
+
+        const childVersions = currentStory.versions.filter(v => v.parentId === currentStory.currentVersionId);
+        if (childVersions.length === 0) return;
+
+        if (childVersions.length === 1) {
+            // Only one future, proceed immediately
+            const childVersion = childVersions[0];
+            performRedoToVersion(currentStoryId, childVersion.id, childVersion.content);
+        } else {
+            // Multiple futures exist! Branching scenario.
+            // Compute visual diffs for each candidate against the current content
+            const currentContent = currentStory.versions.find(v => v.id === currentStory.currentVersionId)?.content || "";
+
+            const candidates = childVersions.map(cv => ({
+                id: currentStoryId,
+                versionId: cv.id,
+                previewText: computeDiffPreview(currentContent, cv.content)
+            }));
+
+            setRedoCandidates(candidates);
+        }
+    }, [currentStoryId, savedStories, performRedoToVersion, computeDiffPreview]);
+
+    const handleSelectRedoBranch = useCallback((versionId: string) => {
+        const currentStory = savedStories.find(s => s.id === currentStoryId);
+        if (!currentStory) return;
+
+        const targetVersion = currentStory.versions.find(v => v.id === versionId);
+        if (!targetVersion) return;
+
+        performRedoToVersion(currentStory.id, versionId, targetVersion.content);
+    }, [currentStoryId, savedStories, performRedoToVersion]);
 
     // --- History Handlers ---
 
     const handleAddHistory = useCallback((entityId: string) => {
-        const targetStoryId = currentStoryId || ""; // Empty string = Draft Mode
-
-        const newId = Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-        const newHistory: StoryEntityHistory = {
-            id: newId,
-            storyId: targetStoryId,
-            entityId: entityId,
-            content: '',
-            createdAt: Date.now()
-        };
-        const updatedLogs = [...historyLogs, newHistory];
-        setHistoryLogs(updatedLogs);
-        return newId;
-    }, [currentStoryId, historyLogs]);
-
-    const handleUpdateHistory = useCallback((id: string, newContent: string) => {
-        const updatedLogs = historyLogs.map(log =>
-            log.id === id ? { ...log, content: newContent } : log
-        );
-        setHistoryLogs(updatedLogs);
-        // localStorage.setItem('deborah_history_logs_v1', JSON.stringify(updatedLogs)); // REMOVED: Defer save
-    }, [historyLogs]);
+        return baseHandleAddHistory(entityId, currentStoryId);
+    }, [currentStoryId, baseHandleAddHistory]);
 
     const handleSaveHistory = useCallback(() => {
         try {
@@ -467,12 +511,11 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
             }
 
             // 2. Perform Full Save (Story + Relations)
-            // Now using the EXACT same logic as GENERATE
+            // Now using the EXACT same logic
             saveGlobalStoryState(
                 targetStoryId,
                 content,
-                savedStories,
-                globalRelations,
+                'manual',
                 activeMommyIds,
                 activeNerdIds,
                 activeLoreIds
@@ -532,8 +575,7 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
             saveGlobalStoryState(
                 targetStoryId,
                 content,
-                savedStories,
-                globalRelations,
+                'manual',
                 activeMommyIds,
                 activeNerdIds,
                 activeLoreIds
@@ -543,14 +585,6 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
             console.error("[useWombSystem] Failed to add and save history:", error);
         }
     }, [currentStoryId, historyLogs, content, savedStories, globalRelations, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState]);
-
-    const handleDeleteHistory = useCallback((id: string) => {
-        if (window.confirm("Delete this history entry?")) {
-            const updatedLogs = historyLogs.filter(log => log.id !== id);
-            setHistoryLogs(updatedLogs);
-            localStorage.setItem('deborah_history_logs_v1', JSON.stringify(updatedLogs));
-        }
-    }, [historyLogs]);
 
 
 
@@ -562,7 +596,8 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
             setHistoryLogs(cleanLogs);
         }
 
-        setContent(story.content);
+        const activeVersion = story.versions.find(v => v.id === story.currentVersionId);
+        setContent(activeVersion ? activeVersion.content : "");
         setCurrentStoryId(story.id);
         // Load Active Lore from Relations
         setActiveMommyIds(relations.filter(r => r.entityType === 'mommy').map(r => r.entityId));
@@ -571,29 +606,33 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
         setShowFileList(false);
     }, [historyLogs]);
 
+    // Derived states for Undo/Redo UI
+    let canUndo = false;
+    let canRedo = false;
+    let redoBranchCount = 0;
+    const currentActiveStory = savedStories.find(s => s.id === currentStoryId);
+    if (currentActiveStory && currentActiveStory.currentVersionId) {
+        const currentVersion = currentActiveStory.versions.find(v => v.id === currentActiveStory.currentVersionId);
+        if (currentVersion && currentVersion.parentId) {
+            canUndo = true;
+        }
+
+        const childVersions = currentActiveStory.versions.filter(v => v.parentId === currentActiveStory.currentVersionId);
+        redoBranchCount = childVersions.length;
+        canRedo = redoBranchCount > 0;
+    }
+
     return {
-        // State
-        wombOutputLength, setWombOutputLength,
-        cordOutputLength, setCordOutputLength,
-        keywordScanRange, setKeywordScanRange,
-        showSettings, setShowSettings,
-        showDebugInfo, setShowDebugInfo,
-        showWombDebugInfo, setShowWombDebugInfo,
-        apiKey, setApiKey,
-        tmdbAccessToken, setTmdbAccessToken,
-        aiModel, setAiModel,
+        // Composed Actions
+        ...settings,
+        ...lore,
+        ...history,
         isGenerating,
         currentStoryId, setCurrentStoryId,
         content, setContent,
-        activeMommyIds, setActiveMommyIds,
-        activeNerdIds, setActiveNerdIds,
-        activeLoreIds, setActiveLoreIds,
         savedStories,
         showFileList, setShowFileList,
         showLorebook, setShowLorebook,
-        mommyList, nerdList, loreList,
-        globalRelations,
-        historyLogs,
 
         // Debug State
         debugSystemPrompt,
@@ -611,7 +650,16 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
         handleDeleteHistory,
         handleNewStory,
         handleSelectStory,
+        handleUndo,
+        handleRedo,
+        canUndo,
+        canRedo,
+        redoBranchCount,
         buildWombContext,
-        displayTitle: content.split('\n')[0]?.trim()
+        displayTitle: content.split('\n')[0]?.trim(),
+        redoCandidates,
+        setRedoCandidates,
+        handleSelectRedoBranch,
+        currentStoryVersions: currentActiveStory?.versions || []
     };
 };
