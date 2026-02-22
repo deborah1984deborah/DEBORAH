@@ -14,6 +14,11 @@ export const useCordChat = (currentStoryId?: string) => {
     // Default chat scope preference
     const [chatScope, setChatScope] = useState<'global' | 'story'>('story');
 
+    // Debug State for CORD
+    const [cordDebugSystemPrompt, setCordDebugSystemPrompt] = useState<string>('');
+    const [cordDebugInputText, setCordDebugInputText] = useState<string>('');
+    const [cordDebugMatchedEntities, setCordDebugMatchedEntities] = useState<any[]>([]);
+
     // 1. Load Sessions on Mount
     useEffect(() => {
         const storedSessions = localStorage.getItem(STORAGE_KEY_SESSIONS);
@@ -182,6 +187,9 @@ export const useCordChat = (currentStoryId?: string) => {
                         if (wombContext.cleanedContent) {
                             systemPrompt += `--- Story Body Text ---\n${wombContext.cleanedContent}`;
                         }
+
+                        // Set matched entities for debug panel
+                        setCordDebugMatchedEntities(wombContext.matchedLoreItems || []);
                     }
                 } catch (e) {
                     console.error("Failed to load WOMB context for CORD", e);
@@ -230,6 +238,10 @@ export const useCordChat = (currentStoryId?: string) => {
                     }
                 }]
             }];
+
+            // Update Debug State visually
+            setCordDebugSystemPrompt(systemPrompt);
+            setCordDebugInputText(JSON.stringify(currentMessages, null, 2));
 
             // Call Chat API
             const response = await callGeminiChat(apiKey, currentMessages as any, aiModel, systemPrompt, cordTools);
@@ -524,6 +536,9 @@ export const useCordChat = (currentStoryId?: string) => {
         toggleWombAwareness,
         chatScope,
         setChatScope,
+        cordDebugSystemPrompt,
+        cordDebugInputText,
+        cordDebugMatchedEntities,
         // Filter helper
         filteredSessions: sessions.filter(s =>
             s.isGlobal || (currentStoryId && s.storyId === currentStoryId)

@@ -12,6 +12,7 @@ interface WombEditorProps {
     onOpenFileList: () => void;
     onNewStory: () => void;
     showWombDebugInfo?: boolean;
+    isCordProcessing?: boolean;
 }
 
 export const WombEditor: React.FC<WombEditorProps> = ({
@@ -23,10 +24,13 @@ export const WombEditor: React.FC<WombEditorProps> = ({
     onSave,
     onOpenFileList,
     onNewStory,
-    showWombDebugInfo
+    showWombDebugInfo,
+    isCordProcessing
 }) => {
     const editorRef = useRef<any>(null); // Monaco editor instance
     const monaco = useMonaco();
+
+    const isLocked = isGenerating || isCordProcessing;
 
     // Define Custom Language & Theme
     useEffect(() => {
@@ -121,6 +125,12 @@ export const WombEditor: React.FC<WombEditorProps> = ({
 
             if (instructionText && editorRef.current) {
                 const editor = editorRef.current;
+
+                // Temporarily lift readOnly restriction if it's currently locked
+                if (isLocked) {
+                    editor.updateOptions({ readOnly: false });
+                }
+
                 const selection = editor.getSelection();
 
                 // Format the instruction with region markers
@@ -129,6 +139,11 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                 // Insert text at cursor
                 const op = { range: selection, text: regionTemplate, forceMoveMarkers: true };
                 editor.executeEdits("insert-instruction", [op]);
+
+                // Restore readOnly restriction if it was locked
+                if (isLocked) {
+                    editor.updateOptions({ readOnly: true });
+                }
 
                 // Focus back
                 editor.focus();
@@ -140,7 +155,7 @@ export const WombEditor: React.FC<WombEditorProps> = ({
         return () => {
             window.removeEventListener('womb:insert-instruction', handleInsertInstruction);
         };
-    }, []);
+    }, [isLocked]); // Added isLocked to dependency array to have the current lock state
 
     const handleInsertRegion = () => {
         if (!editorRef.current) return;
@@ -366,7 +381,10 @@ export const WombEditor: React.FC<WombEditorProps> = ({
 
                         // Disable word highlighting
                         occurrencesHighlight: 'off',
-                        selectionHighlight: false
+                        selectionHighlight: false,
+
+                        // Disable editing when system is locked
+                        readOnly: isLocked
                     }}
                 />
 
@@ -387,17 +405,48 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                             : "ここに物語を記述します。作品の1行目が自動でタイトルになります。"}
                     </div>
                 )}
+
+                {/* CORD PROCESSING OVERLAY */}
+                {isCordProcessing && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        backdropFilter: 'blur(3px)',
+                        zIndex: 5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        pointerEvents: 'none', // Prevent interaction but Editor is also readOnly
+                        borderRadius: '8px'
+                    }}>
+                        <div style={{
+                            color: '#38bdf8',
+                            fontSize: '1.2rem',
+                            fontWeight: 'bold',
+                            letterSpacing: '0.2em',
+                            animation: 'pulse 1.5s infinite',
+                            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                            padding: '1rem 2rem',
+                            borderRadius: '30px',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            boxShadow: '0 0 20px rgba(56, 189, 248, 0.2)'
+                        }}>
+                            CORD ADVISOR IS PROCESSING...
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* GENERATE BUTTON */}
             <button
                 onClick={onSave}
-                disabled={isGenerating}
+                disabled={isLocked}
                 style={{
                     position: 'absolute',
                     bottom: '1.5rem',
                     right: '1.5rem',
-                    backgroundColor: isGenerating ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                    backgroundColor: isLocked ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
                     backdropFilter: 'blur(5px)',
                     border: '1px solid rgba(255, 255, 255, 0.3)',
                     borderRadius: '30px',
@@ -411,25 +460,25 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
-                    boxShadow: isGenerating ? 'none' : '0 4px 15px rgba(0, 0, 0, 0.3)',
+                    boxShadow: isLocked ? 'none' : '0 4px 15px rgba(0, 0, 0, 0.3)',
                     zIndex: 10 // Ensure above editor
                 }}
                 onMouseEnter={(e) => {
-                    if (!isGenerating) {
+                    if (!isLocked) {
                         e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
                         e.currentTarget.style.borderColor = 'white';
                         e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.3)';
                     }
                 }}
                 onMouseLeave={(e) => {
-                    if (!isGenerating) {
+                    if (!isLocked) {
                         e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                         e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                         e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
                     }
                 }}
             >
-                {isGenerating ? (
+                {isLocked ? (
                     <>
                         <span style={{
                             display: 'inline-block',
@@ -456,6 +505,6 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                     }
                 `}
             </style>
-        </div>
+        </div >
     );
 };

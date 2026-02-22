@@ -11,6 +11,8 @@ interface WombSettingsPanelProps {
     setCordOutputLength: (length: number) => void;
     keywordScanRange: number;
     setKeywordScanRange: (length: number) => void;
+    isCordActiveModeEnabled: boolean;
+    setIsCordActiveModeEnabled: (enabled: boolean) => void;
     showDebugInfo: boolean;
     setShowDebugInfo: (show: boolean) => void;
     showWombDebugInfo: boolean;
@@ -33,6 +35,8 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
     setCordOutputLength,
     keywordScanRange,
     setKeywordScanRange,
+    isCordActiveModeEnabled,
+    setIsCordActiveModeEnabled,
     showDebugInfo,
     setShowDebugInfo,
     showWombDebugInfo,
@@ -60,23 +64,29 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
             if (anchorRef.current) {
                 const rect = anchorRef.current.getBoundingClientRect();
                 setCoords({
-                    top: rect.top,
-                    left: rect.right + 8 // 0.5rem equivalent
+                    top: window.scrollY + rect.top,
+                    left: window.scrollX + rect.right + 8 // 0.5rem equivalent
                 });
             }
         };
 
-        updateCoords();
+        if (showSettings) {
+            updateCoords();
+        }
+
         window.addEventListener('resize', updateCoords);
         return () => window.removeEventListener('resize', updateCoords);
     }, [anchorRef, showSettings]); // Re-measure on show
+
+    // Ensure it doesn't crash during SSR
+    if (typeof document === 'undefined') return null;
 
     return createPortal(
         <>
             <div
                 onClick={() => setIsFront(true)}
                 style={{
-                    position: 'fixed',
+                    position: 'absolute',
                     top: coords.top,
                     left: coords.left,
                     width: '280px',
@@ -94,7 +104,7 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                     opacity: showSettings ? 1 : 0,
                     transform: showSettings ? 'translateX(0)' : 'translateX(-10px)',
                     pointerEvents: showSettings ? 'auto' : 'none',
-                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    transition: 'opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                     maxHeight: '90vh', // Prevent overflow off screen
                     overflowY: 'auto' // Allow scrolling if content is too tall
                 }}>
@@ -250,6 +260,52 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                         >
                             Edit
                         </button>
+                    </label>
+                </div>
+
+                {/* 2.7. CORD Active System Toggle */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#e2e8f0', fontWeight: 'bold' }}>
+                            {lang === 'ja' ? '能動的CORDシステムを有効化' : 'Enable Active CORD System'}
+                        </span>
+
+                        <div style={{ position: 'relative', width: '40px', height: '22px' }}>
+                            <input
+                                type="checkbox"
+                                checked={isCordActiveModeEnabled}
+                                onChange={(e) => setIsCordActiveModeEnabled(e.target.checked)}
+                                style={{
+                                    opacity: 0,
+                                    width: 0,
+                                    height: 0
+                                }}
+                            />
+                            <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                borderRadius: '22px',
+                                backgroundColor: isCordActiveModeEnabled ? 'rgba(251, 191, 36, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                                border: isCordActiveModeEnabled ? '1px solid #fbbf24' : '1px solid rgba(148, 163, 184, 0.3)',
+                                transition: 'all 0.3s ease',
+                                boxShadow: isCordActiveModeEnabled ? '0 0 8px rgba(251, 191, 36, 0.3)' : 'none'
+                            }}></div>
+                            <div style={{
+                                position: 'absolute',
+                                top: '3px',
+                                left: '3px',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                backgroundColor: '#fff',
+                                transform: isCordActiveModeEnabled ? 'translateX(18px)' : 'translateX(0)',
+                                transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                            }}></div>
+                        </div>
                     </label>
                 </div>
 

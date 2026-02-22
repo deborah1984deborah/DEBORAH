@@ -100,9 +100,49 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
 
     // State to track which debug panel is functionally in front
     const [activeDebugPanel, setActiveDebugPanel] = useState<'womb' | 'cord'>('womb');
+    const [isCordActiveModeEnabled, setIsCordActiveModeEnabled] = useState(false);
+    const [isCordProcessing, setIsCordProcessing] = useState(false);
+    const [cordDebugData, setCordDebugData] = useState<{ systemPrompt: string, inputText: string, matchedEntities: any[] }>({ systemPrompt: '', inputText: '', matchedEntities: [] });
 
     // Ref for SETTINGS button to align the portal
     const settingsBtnRef = React.useRef<HTMLButtonElement>(null);
+
+    // Load settings from localStorage on mount
+    React.useEffect(() => {
+        const savedApiKey = localStorage.getItem('womb_api_key');
+        if (savedApiKey) {
+            setApiKey(savedApiKey);
+        }
+        const savedTmdbToken = localStorage.getItem('womb_tmdb_token');
+        if (savedTmdbToken) {
+            setTmdbAccessToken(savedTmdbToken);
+        }
+        const savedAiModel = localStorage.getItem('womb_ai_model');
+        if (savedAiModel) {
+            setAiModel(savedAiModel as 'gemini-2.5-flash' | 'gemini-3.1-pro-preview');
+        }
+        const savedWombOutputLength = localStorage.getItem('womb_output_length');
+        if (savedWombOutputLength) {
+            setWombOutputLength(parseInt(savedWombOutputLength));
+        }
+        const savedCordOutputLength = localStorage.getItem('cord_output_length');
+        if (savedCordOutputLength) {
+            setCordOutputLength(parseInt(savedCordOutputLength));
+        }
+        const savedKeywordScanRange = localStorage.getItem('keyword_scan_range');
+        if (savedKeywordScanRange) {
+            setKeywordScanRange(parseInt(savedKeywordScanRange));
+        }
+        const savedCordActiveMode = localStorage.getItem('womb_cord_active_mode');
+        if (savedCordActiveMode !== null) {
+            setIsCordActiveModeEnabled(savedCordActiveMode === 'true');
+        }
+    }, [setApiKey, setTmdbAccessToken, setAiModel, setWombOutputLength, setCordOutputLength, setKeywordScanRange, setIsCordActiveModeEnabled]);
+
+    React.useEffect(() => {
+        localStorage.setItem('womb_cord_active_mode', isCordActiveModeEnabled.toString());
+    }, [isCordActiveModeEnabled]);
+
 
     return (
         <div className="womb-system-container" style={{
@@ -145,6 +185,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     onOpenFileList={() => setShowFileList(true)}
                     onNewStory={handleNewStory}
                     showWombDebugInfo={showWombDebugInfo}
+                    isCordProcessing={isCordProcessing}
                 />
 
                 {/* CORD: Chat Interface (Right) */}
@@ -214,6 +255,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 setCordOutputLength={setCordOutputLength}
                                 keywordScanRange={keywordScanRange}
                                 setKeywordScanRange={setKeywordScanRange}
+                                isCordActiveModeEnabled={isCordActiveModeEnabled}
+                                setIsCordActiveModeEnabled={setIsCordActiveModeEnabled}
                                 showDebugInfo={showDebugInfo}
                                 setShowDebugInfo={setShowDebugInfo}
                                 showWombDebugInfo={showWombDebugInfo}
@@ -244,6 +287,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                             apiKey={apiKey}
                             aiModel={aiModel}
                             getWombContext={buildWombContext}
+                            onProcessingChange={setIsCordProcessing}
+                            onDebugDataChange={setCordDebugData}
                         />
                     </div>
                 </div>
@@ -286,9 +331,9 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
             {/* CORD DEBUG PANEL */}
             <CordDebugPanel
                 showCordDebugInfo={showDebugInfo}
-                debugSystemPrompt={debugSystemPrompt}
-                debugInputText={debugInputText}
-                debugMatchedEntities={debugMatchedEntities}
+                debugSystemPrompt={cordDebugData.systemPrompt}
+                debugInputText={cordDebugData.inputText}
+                debugMatchedEntities={cordDebugData.matchedEntities}
                 isActive={activeDebugPanel === 'cord'}
                 onClick={() => setActiveDebugPanel('cord')}
             />

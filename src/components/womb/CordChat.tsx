@@ -9,10 +9,12 @@ interface CordChatProps {
     showDebugInfo?: boolean;
     apiKey: string;
     aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
-    getWombContext?: () => Promise<{ systemInstruction: string, scanTargetContent: string, matchedLoreItems: any[], cleanedContent: string }>;
+    getWombContext?: () => Promise<{ systemInstruction: string, scanTargetContent: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>;
+    onProcessingChange?: (isProcessing: boolean) => void;
+    onDebugDataChange?: (debugData: { systemPrompt: string, inputText: string, matchedEntities: any[] }) => void;
 }
 
-export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDebugInfo = false, apiKey, aiModel, getWombContext }) => {
+export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDebugInfo = false, apiKey, aiModel, getWombContext, onProcessingChange, onDebugDataChange }) => {
     // Integrate Custom Hook
     const {
         sessions,
@@ -28,7 +30,10 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
         deleteMessage,
         toggleWombAwareness,
         chatScope,
-        setChatScope
+        setChatScope,
+        cordDebugSystemPrompt,
+        cordDebugInputText,
+        cordDebugMatchedEntities
     } = useCordChat(currentStoryId);
 
     const [inputValue, setInputValue] = useState('');
@@ -54,6 +59,22 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
     useEffect(() => {
         scrollToBottom();
     }, [messages, isTyping]);
+
+    useEffect(() => {
+        if (onProcessingChange) {
+            onProcessingChange(isTyping);
+        }
+    }, [isTyping, onProcessingChange]);
+
+    useEffect(() => {
+        if (onDebugDataChange) {
+            onDebugDataChange({
+                systemPrompt: cordDebugSystemPrompt,
+                inputText: cordDebugInputText,
+                matchedEntities: cordDebugMatchedEntities
+            });
+        }
+    }, [cordDebugSystemPrompt, cordDebugInputText, cordDebugMatchedEntities, onDebugDataChange]);
 
     const handleSend = () => {
         if (!inputValue.trim() || isTyping) return;
