@@ -269,8 +269,10 @@ Example:
 Do NOT output these instructions in your generated text. Instead, strictly FOLLOW the instructions provided in those lines when writing the continuation of the story.
 ===========================
 `;
+        let entityContext = "";
+
         if (matchedLoreItems.length > 0) {
-            systemInstruction = matchedLoreItems.map(item => {
+            entityContext = matchedLoreItems.map(item => {
                 if (item.type === 'lore') {
                     return `Name: ${item.name}, Summary: ${item.summary}`;
                 } else if (item.type === 'fuckmeat') {
@@ -295,14 +297,16 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
                 }).filter(Boolean).join('\n');
 
                 if (historyStr) {
-                    systemInstruction += `\n\n=== PAST EVENTS IN THIS STORY ===${historyStr}`;
+                    entityContext += `\n\n=== PAST EVENTS IN THIS STORY ===${historyStr}`;
                 }
             }
+            // Append the entity and history info to the Womb-specific system instruction
+            systemInstruction += `\n\n--- Lorebook Context ---\n${entityContext}`;
         }
 
         const derivedTitle = content.split('\n')[0]?.trim() || "Untitled Story";
 
-        return { systemInstruction, scanTargetContent, matchedLoreItems, allActiveLoreItems, allLoreItems, cleanedContent, storyTitle: derivedTitle };
+        return { systemInstruction, entityContext, scanTargetContent, matchedLoreItems, allActiveLoreItems, allLoreItems, cleanedContent, storyTitle: derivedTitle };
     }, [content, keywordScanRange, mommyList, activeMommyIds, nerdList, activeNerdIds, loreList, activeLoreIds, historyLogs, currentStoryId]);
 
 
@@ -359,6 +363,29 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
         activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, lang,
         keywordScanRange, mommyList, nerdList, loreList // Added to dependencies
     ]);
+
+    // Action: Manual Save (No Generation)
+    const handleManualSave = useCallback(() => {
+        if (!content.trim()) return;
+
+        let targetStoryId = currentStoryId;
+        if (!targetStoryId) {
+            targetStoryId = Date.now().toString();
+            setCurrentStoryId(targetStoryId);
+        }
+
+        saveGlobalStoryState(
+            targetStoryId,
+            content,
+            savedStories,
+            globalRelations,
+            activeMommyIds,
+            activeNerdIds,
+            activeLoreIds
+        );
+
+        // Optional: Could add a small non-blocking toast here later if needed
+    }, [content, currentStoryId, savedStories, globalRelations, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState]);
 
     // Helper: Clean up state when transitioning to a fresh story
     const transitionToNewStory = useCallback(() => {
@@ -575,6 +602,7 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
 
         // Actions
         handleSave,
+        handleManualSave,
         handleDelete,
         handleAddHistory,
         handleUpdateHistory,

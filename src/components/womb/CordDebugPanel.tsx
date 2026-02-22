@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LoreItem } from '../../types';
 
 interface CordDebugPanelProps {
+    lang: 'ja' | 'en'; // Added lang prop for localization
     showCordDebugInfo: boolean;
     debugSystemPrompt: string;
     debugInputText: string;
@@ -12,6 +13,7 @@ interface CordDebugPanelProps {
 }
 
 export const CordDebugPanel: React.FC<CordDebugPanelProps> = ({
+    lang,
     showCordDebugInfo,
     debugSystemPrompt,
     debugInputText,
@@ -19,7 +21,25 @@ export const CordDebugPanel: React.FC<CordDebugPanelProps> = ({
     isActive,
     onClick
 }) => {
+    const [copiedSystem, setCopiedSystem] = useState(false);
+    const [copiedInput, setCopiedInput] = useState(false);
+
     if (!showCordDebugInfo) return null;
+
+    const copyToClipboard = async (text: string, type: 'system' | 'input') => {
+        try {
+            await navigator.clipboard.writeText(text);
+            if (type === 'system') {
+                setCopiedSystem(true);
+                setTimeout(() => setCopiedSystem(false), 2000);
+            } else {
+                setCopiedInput(true);
+                setTimeout(() => setCopiedInput(false), 2000);
+            }
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+    };
 
     return createPortal(
         <div
@@ -76,7 +96,40 @@ export const CordDebugPanel: React.FC<CordDebugPanelProps> = ({
 
             {/* System Prompt */}
             <div>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#94a3b8' }}>System Prompt (Dynamic)</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>System Prompt (Dynamic)</h4>
+                    {debugSystemPrompt && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); copyToClipboard(debugSystemPrompt, 'system'); }}
+                            title={lang === 'ja' ? "システムプロンプトをコピー" : "Copy System Prompt"}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: copiedSystem ? '#34d399' : '#94a3b8',
+                                padding: '4px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '4px'
+                            }}
+                            onMouseEnter={(e) => { if (!copiedSystem) e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
+                            onMouseLeave={(e) => { if (!copiedSystem) e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                            {copiedSystem ? (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            ) : (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            )}
+                        </button>
+                    )}
+                </div>
                 <pre style={{
                     margin: 0,
                     padding: '0.5rem',
@@ -96,7 +149,40 @@ export const CordDebugPanel: React.FC<CordDebugPanelProps> = ({
 
             {/* Input Text */}
             <div>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#94a3b8' }}>API Request Input Text</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>API Request Input Text</h4>
+                    {debugInputText && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); copyToClipboard(debugInputText, 'input'); }}
+                            title={lang === 'ja' ? "入力テキストをコピー" : "Copy Input Text"}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: copiedInput ? '#34d399' : '#94a3b8',
+                                padding: '4px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '4px'
+                            }}
+                            onMouseEnter={(e) => { if (!copiedInput) e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
+                            onMouseLeave={(e) => { if (!copiedInput) e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                            {copiedInput ? (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            ) : (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            )}
+                        </button>
+                    )}
+                </div>
                 <pre style={{
                     margin: 0,
                     padding: '0.5rem',

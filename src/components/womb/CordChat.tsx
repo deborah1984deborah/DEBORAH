@@ -9,7 +9,7 @@ interface CordChatProps {
     showDebugInfo?: boolean;
     apiKey: string;
     aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
-    getWombContext?: () => Promise<{ systemInstruction: string, scanTargetContent: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>;
+    getWombContext?: () => Promise<{ systemInstruction: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>;
     onProcessingChange?: (isProcessing: boolean) => void;
     onDebugDataChange?: (debugData: { systemPrompt: string, inputText: string, matchedEntities: any[] }) => void;
 }

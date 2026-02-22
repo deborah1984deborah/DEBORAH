@@ -51,6 +51,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
 
         // Actions
         handleSave,
+        handleManualSave,
         handleDelete,
         handleAddHistory,
         handleUpdateHistory,
@@ -182,6 +183,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     displayTitle={displayTitle}
                     isGenerating={isGenerating}
                     onSave={handleSave}
+                    onManualSave={handleManualSave}
                     onOpenFileList={() => setShowFileList(true)}
                     onNewStory={handleNewStory}
                     showWombDebugInfo={showWombDebugInfo}
@@ -330,6 +332,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
 
             {/* CORD DEBUG PANEL */}
             <CordDebugPanel
+                lang={lang}
                 showCordDebugInfo={showDebugInfo}
                 debugSystemPrompt={cordDebugData.systemPrompt}
                 debugInputText={cordDebugData.inputText}
@@ -340,6 +343,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
 
             {/* WOMB DEBUG PANEL */}
             <WombDebugPanel
+                lang={lang}
                 showWombDebugInfo={showWombDebugInfo}
                 debugSystemPrompt={debugSystemPrompt}
                 debugInputText={debugInputText}

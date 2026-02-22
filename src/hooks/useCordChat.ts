@@ -135,7 +135,7 @@ export const useCordChat = (currentStoryId?: string) => {
         apiKey: string,
         aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview',
         lang: 'ja' | 'en',
-        getWombContext?: () => Promise<{ systemInstruction: string, scanTargetContent: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>
+        getWombContext?: () => Promise<{ systemInstruction: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>
     ) => {
         if (!apiKey) {
             // Fallback mock if no API key
@@ -172,18 +172,14 @@ export const useCordChat = (currentStoryId?: string) => {
                     const wombContext = await getWombContext();
                     if (wombContext) {
                         systemPrompt += `\n\n[WOMB Story Context]\n`;
-                        if (wombContext.systemInstruction) {
-                            systemPrompt += `--- Matched Entities ---\n${wombContext.systemInstruction}\n\n`;
+                        if (wombContext.entityContext) {
+                            systemPrompt += `--- Matched Entities ---\n${wombContext.entityContext}\n\n`;
                         }
                         if (wombContext.allActiveLoreItems && wombContext.allActiveLoreItems.length > 0) {
                             const availableEntities = wombContext.allActiveLoreItems.map((item: any) => `- Name: ${item.name}`).join('\n');
                             systemPrompt += `--- Currently Active Entities (In UI) ---\n${availableEntities}\n\n`;
                         }
-                        if (wombContext.allLoreItems && wombContext.allLoreItems.length > 0) {
-                            // Only provide a list of names to save token space.
-                            const allNames = wombContext.allLoreItems.map((item: any) => item.name).join(', ');
-                            systemPrompt += `--- All Available Lorebook Characters ---\n${allNames}\n\n`;
-                        }
+
                         if (wombContext.cleanedContent) {
                             systemPrompt += `--- Story Body Text ---\n${wombContext.cleanedContent}`;
                         }
