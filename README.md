@@ -1,5 +1,7 @@
 # DEBORAH System Overview & Basic Design
 
+![DEBORAH](assets/header.png)
+
 [日本語版](#deborah-システム-基本設計概要資料-japanese-version)
 
 ## 1. Introduction
@@ -72,6 +74,8 @@ The ultimate goal for DEBORAH is to evolve beyond a text-based novel creation to
 <a id="japanese"></a>
 
 # DEBORAH システム 基本設計・概要資料 (Japanese Version)
+
+![DEBORAH](assets/header.png)
 
 ## 1. アプリケーション概要
 
