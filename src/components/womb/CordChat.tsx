@@ -132,7 +132,7 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                     color: 'white',
                     fontSize: '10px',
                     padding: '2px',
-                    zIndex: 9999,
+                    zIndex: 900,
                     pointerEvents: 'none',
                     borderBottomLeftRadius: '4px'
                 }}>

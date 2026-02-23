@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WombSafetyModal } from './WombSafetyModal';
+import { ActiveCordSettingsModal } from './ActiveCordSettingsModal';
 
 interface WombSettingsPanelProps {
     showSettings: boolean;
@@ -9,8 +10,12 @@ interface WombSettingsPanelProps {
     setWombOutputLength: (length: number) => void;
     cordOutputLength: number;
     setCordOutputLength: (length: number) => void;
+    wombContextLength: number;
+    setWombContextLength: (length: number) => void;
     keywordScanRange: number;
     setKeywordScanRange: (length: number) => void;
+    activeCordHistoryInterval: number;
+    setActiveCordHistoryInterval: (interval: number) => void;
     isCordActiveModeEnabled: boolean;
     setIsCordActiveModeEnabled: (enabled: boolean) => void;
     showDebugInfo: boolean;
@@ -33,8 +38,12 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
     setWombOutputLength,
     cordOutputLength,
     setCordOutputLength,
+    wombContextLength,
+    setWombContextLength,
     keywordScanRange,
     setKeywordScanRange,
+    activeCordHistoryInterval,
+    setActiveCordHistoryInterval,
     isCordActiveModeEnabled,
     setIsCordActiveModeEnabled,
     showDebugInfo,
@@ -52,6 +61,8 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
     const [coords, setCoords] = useState({ top: 0, left: 0 });
     const [isFront, setIsFront] = useState(false);
     const [isSafetyModalOpen, setIsSafetyModalOpen] = useState(false);
+    const [isCordSettingsModalOpen, setIsCordSettingsModalOpen] = useState(false);
+    const [isApiKeysOpen, setIsApiKeysOpen] = useState(false);
 
     useEffect(() => {
         if (!showSettings) {
@@ -104,9 +115,7 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                     opacity: showSettings ? 1 : 0,
                     transform: showSettings ? 'translateX(0)' : 'translateX(-10px)',
                     pointerEvents: showSettings ? 'auto' : 'none',
-                    transition: 'opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                    maxHeight: '90vh', // Prevent overflow off screen
-                    overflowY: 'auto' // Allow scrolling if content is too tall
+                    transition: 'opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}>
                 <div style={{
                     borderBottom: '1px solid rgba(148, 163, 184, 0.2)',
@@ -217,6 +226,31 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                     </div>
                 </div>
 
+                {/* 2.4. WOMB Context Length */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
+                        {lang === 'ja' ? 'WOMBの送信範囲 (文字数)' : 'WOMB Send Context Length'}
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <input
+                            type="number"
+                            value={wombContextLength}
+                            onChange={(e) => setWombContextLength(Number(e.target.value))}
+                            style={{
+                                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                border: '1px solid rgba(148, 163, 184, 0.3)',
+                                borderRadius: '4px',
+                                color: '#e2e8f0',
+                                padding: '0.4rem',
+                                fontSize: '0.9rem',
+                                width: '100%',
+                                outline: 'none'
+                            }}
+                        />
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>chars</span>
+                    </div>
+                </div>
+
                 {/* 2.5. Keyword Scan Range */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                     <label style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
@@ -307,6 +341,23 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                             }}></div>
                         </div>
                     </label>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setIsCordSettingsModalOpen(true); }}
+                            style={{
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                color: '#fbbf24', // Amber-400
+                                padding: '0.2rem 0',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                                marginRight: '10px' // Added to shift slightly left
+                            }}
+                        >
+                            Edit
+                        </button>
+                    </div>
                 </div>
 
                 {/* 3. Womb Debug Info Toggle */}
@@ -408,170 +459,208 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                     margin: '0.5rem 0'
                 }}></div>
 
-                {/* 3. API Key (Gemini) */}
+                {/* Collapsible API Keys Section */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    <label style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
-                        Gemini API Key
-                    </label>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <input
-                            type="password"
-                            value={apiKey}
-                            onChange={(e) => setApiKey(e.target.value)}
-                            placeholder="Enter API Key..."
+                    <div
+                        onClick={(e) => { e.stopPropagation(); setIsApiKeysOpen(!isApiKeysOpen); }}
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            padding: '0.4rem 0'
+                        }}
+                    >
+                        <span style={{ fontSize: '0.8rem', color: '#e2e8f0', fontWeight: 'bold' }}>
+                            {lang === 'ja' ? 'API キー設定' : 'API Key Settings'}
+                        </span>
+                        <svg
+                            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                             style={{
-                                backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                                border: '1px solid rgba(148, 163, 184, 0.3)',
-                                borderRadius: '4px',
-                                color: '#e2e8f0',
-                                padding: '0.4rem',
-                                fontSize: '0.9rem',
-                                width: '100%',
-                                outline: 'none',
-                                fontFamily: 'monospace'
-                            }}
-                        />
-                        {/* Lock Icon */}
-                        <div style={{ color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2rem' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
-                        </div>
-                    </div>
-                    {/* Test Connection Button */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.2rem' }}>
-                        <button
-                            onClick={async () => {
-                                if (!apiKey) return;
-                                const btn = document.getElementById('test-conn-btn');
-                                if (btn) btn.innerText = 'Testing...';
-
-                                const { testGeminiConnection } = await import('../../utils/gemini');
-                                const result = await testGeminiConnection(apiKey);
-
-                                if (btn) {
-                                    if (result.success) {
-                                        btn.innerText = 'Connection OK';
-                                        btn.style.color = '#4ade80';
-                                    } else {
-                                        btn.innerText = 'Connection Failed';
-                                        btn.style.color = '#f87171';
-                                        alert(`Connection Failed:\n${result.message}`);
-                                    }
-
-                                    setTimeout(() => {
-                                        if (btn) {
-                                            btn.innerText = 'Test Connection';
-                                            btn.style.color = '#38bdf8';
-                                        }
-                                    }, 3000);
-                                }
-                            }}
-                            id="test-conn-btn"
-                            disabled={!apiKey}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#38bdf8',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                                textDecoration: 'underline',
-                                opacity: apiKey ? 1 : 0.5,
-                                transition: 'color 0.3s'
+                                transform: isApiKeysOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s ease'
                             }}
                         >
-                            Test Connection
-                        </button>
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
                     </div>
-                </div>
 
-                {/* 4. TMDB Settings */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
-                    <label style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
-                        TMDB Read Access Token (v4)
-                    </label>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <input
-                            type="password"
-                            value={tmdbAccessToken}
-                            onChange={(e) => setTmdbAccessToken(e.target.value)}
-                            placeholder="Enter TMDB Token..."
-                            style={{
-                                backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                                border: '1px solid rgba(148, 163, 184, 0.3)',
-                                borderRadius: '4px',
-                                color: '#e2e8f0',
-                                padding: '0.4rem',
-                                fontSize: '0.9rem',
-                                width: '100%',
-                                outline: 'none',
-                                fontFamily: 'monospace'
-                            }}
-                        />
-                        {/* Movie Icon */}
-                        <div style={{ color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2rem' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-                                <line x1="7" y1="2" x2="7" y2="22"></line>
-                                <line x1="17" y1="2" x2="17" y2="22"></line>
-                                <line x1="2" y1="12" x2="22" y2="12"></line>
-                                <line x1="2" y1="7" x2="7" y2="7"></line>
-                                <line x1="2" y1="17" x2="7" y2="17"></line>
-                                <line x1="17" y1="17" x2="22" y2="17"></line>
-                                <line x1="17" y1="7" x2="22" y2="7"></line>
-                            </svg>
+                    {isApiKeysOpen && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.4rem' }}>
+                            {/* 3. API Key (Gemini) */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                <label style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
+                                    Gemini API Key
+                                </label>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <input
+                                        type="password"
+                                        value={apiKey}
+                                        onChange={(e) => setApiKey(e.target.value)}
+                                        placeholder="Enter API Key..."
+                                        style={{
+                                            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                            border: '1px solid rgba(148, 163, 184, 0.3)',
+                                            borderRadius: '4px',
+                                            color: '#e2e8f0',
+                                            padding: '0.4rem',
+                                            fontSize: '0.9rem',
+                                            width: '100%',
+                                            outline: 'none',
+                                            fontFamily: 'monospace'
+                                        }}
+                                    />
+                                    {/* Lock Icon */}
+                                    <div style={{ color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2rem' }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                {/* Test Connection Button */}
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.2rem' }}>
+                                    <button
+                                        onClick={async () => {
+                                            if (!apiKey) return;
+                                            const btn = document.getElementById('test-conn-btn');
+                                            if (btn) btn.innerText = 'Testing...';
+
+                                            const { testGeminiConnection } = await import('../../utils/gemini');
+                                            const result = await testGeminiConnection(apiKey);
+
+                                            if (btn) {
+                                                if (result.success) {
+                                                    btn.innerText = 'Connection OK';
+                                                    btn.style.color = '#4ade80';
+                                                } else {
+                                                    btn.innerText = 'Connection Failed';
+                                                    btn.style.color = '#f87171';
+                                                    alert(`Connection Failed:\n${result.message}`);
+                                                }
+
+                                                setTimeout(() => {
+                                                    if (btn) {
+                                                        btn.innerText = 'Test Connection';
+                                                        btn.style.color = '#38bdf8';
+                                                    }
+                                                }, 3000);
+                                            }
+                                        }}
+                                        id="test-conn-btn"
+                                        disabled={!apiKey}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: '#38bdf8',
+                                            cursor: 'pointer',
+                                            fontSize: '0.8rem',
+                                            textDecoration: 'underline',
+                                            opacity: apiKey ? 1 : 0.5,
+                                            transition: 'color 0.3s'
+                                        }}
+                                    >
+                                        Test Connection
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* 4. TMDB Settings */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
+                                <label style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>
+                                    TMDB Read Access Token (v4)
+                                </label>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <input
+                                        type="password"
+                                        value={tmdbAccessToken}
+                                        onChange={(e) => setTmdbAccessToken(e.target.value)}
+                                        placeholder="Enter TMDB Token..."
+                                        style={{
+                                            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                            border: '1px solid rgba(148, 163, 184, 0.3)',
+                                            borderRadius: '4px',
+                                            color: '#e2e8f0',
+                                            padding: '0.4rem',
+                                            fontSize: '0.9rem',
+                                            width: '100%',
+                                            outline: 'none',
+                                            fontFamily: 'monospace'
+                                        }}
+                                    />
+                                    {/* Movie Icon */}
+                                    <div style={{ color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '2rem' }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                                            <line x1="7" y1="2" x2="7" y2="22"></line>
+                                            <line x1="17" y1="2" x2="17" y2="22"></line>
+                                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                                            <line x1="2" y1="7" x2="7" y2="7"></line>
+                                            <line x1="2" y1="17" x2="7" y2="17"></line>
+                                            <line x1="17" y1="17" x2="22" y2="17"></line>
+                                            <line x1="17" y1="7" x2="22" y2="7"></line>
+                                        </svg>
+                                    </div>
+                                </div>
+                                {/* Test Connection Button (TMDB) */}
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.2rem' }}>
+                                    <button
+                                        onClick={async () => {
+                                            if (!tmdbAccessToken) return;
+                                            const btn = document.getElementById('test-tmdb-btn');
+                                            if (btn) btn.innerText = 'Testing...';
+
+                                            const { testTmdbConnection } = await import('../../utils/tmdb');
+                                            const result = await testTmdbConnection(tmdbAccessToken);
+
+                                            if (btn) {
+                                                if (result.success) {
+                                                    btn.innerText = 'Connection OK';
+                                                    btn.style.color = '#4ade80';
+                                                } else {
+                                                    btn.innerText = 'Connection Failed';
+                                                    btn.style.color = '#f87171';
+                                                    alert(`Connection Failed:\n${result.message}`);
+                                                }
+
+                                                setTimeout(() => {
+                                                    if (btn) {
+                                                        btn.innerText = 'Test TMDB';
+                                                        btn.style.color = '#38bdf8';
+                                                    }
+                                                }, 3000);
+                                            }
+                                        }}
+                                        id="test-tmdb-btn"
+                                        disabled={!tmdbAccessToken}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: '#38bdf8',
+                                            cursor: 'pointer',
+                                            fontSize: '0.8rem',
+                                            textDecoration: 'underline',
+                                            opacity: tmdbAccessToken ? 1 : 0.5,
+                                            transition: 'color 0.3s'
+                                        }}
+                                    >
+                                        Test TMDB
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    {/* Test Connection Button (TMDB) */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.2rem' }}>
-                        <button
-                            onClick={async () => {
-                                if (!tmdbAccessToken) return;
-                                const btn = document.getElementById('test-tmdb-btn');
-                                if (btn) btn.innerText = 'Testing...';
-
-                                const { testTmdbConnection } = await import('../../utils/tmdb');
-                                const result = await testTmdbConnection(tmdbAccessToken);
-
-                                if (btn) {
-                                    if (result.success) {
-                                        btn.innerText = 'Connection OK';
-                                        btn.style.color = '#4ade80';
-                                    } else {
-                                        btn.innerText = 'Connection Failed';
-                                        btn.style.color = '#f87171';
-                                        alert(`Connection Failed:\n${result.message}`);
-                                    }
-
-                                    setTimeout(() => {
-                                        if (btn) {
-                                            btn.innerText = 'Test TMDB';
-                                            btn.style.color = '#38bdf8';
-                                        }
-                                    }, 3000);
-                                }
-                            }}
-                            id="test-tmdb-btn"
-                            disabled={!tmdbAccessToken}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#38bdf8',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                                textDecoration: 'underline',
-                                opacity: tmdbAccessToken ? 1 : 0.5,
-                                transition: 'color 0.3s'
-                            }}
-                        >
-                            Test TMDB
-                        </button>
-                    </div>
+                    )}
                 </div>
 
-            </div >
+            </div>
             <WombSafetyModal isOpen={isSafetyModalOpen} onClose={() => setIsSafetyModalOpen(false)} lang={lang} />
+            <ActiveCordSettingsModal
+                isOpen={isCordSettingsModalOpen}
+                onClose={() => setIsCordSettingsModalOpen(false)}
+                lang={lang}
+                activeCordHistoryInterval={activeCordHistoryInterval}
+                setActiveCordHistoryInterval={setActiveCordHistoryInterval}
+            />
         </>,
         document.body
     );

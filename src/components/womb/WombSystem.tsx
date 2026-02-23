@@ -25,7 +25,9 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         // State
         wombOutputLength, setWombOutputLength,
         cordOutputLength, setCordOutputLength,
+        wombContextLength, setWombContextLength,
         keywordScanRange, setKeywordScanRange,
+        activeCordHistoryInterval, setActiveCordHistoryInterval,
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
         showWombDebugInfo, setShowWombDebugInfo,
@@ -270,8 +272,12 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 setWombOutputLength={setWombOutputLength}
                                 cordOutputLength={cordOutputLength}
                                 setCordOutputLength={setCordOutputLength}
+                                wombContextLength={wombContextLength}
+                                setWombContextLength={setWombContextLength}
                                 keywordScanRange={keywordScanRange}
                                 setKeywordScanRange={setKeywordScanRange}
+                                activeCordHistoryInterval={activeCordHistoryInterval}
+                                setActiveCordHistoryInterval={setActiveCordHistoryInterval}
                                 isCordActiveModeEnabled={isCordActiveModeEnabled}
                                 setIsCordActiveModeEnabled={setIsCordActiveModeEnabled}
                                 showDebugInfo={showDebugInfo}

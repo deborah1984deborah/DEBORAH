@@ -79,6 +79,7 @@ export interface StoryLoreRelation {
 export interface StoryEntityHistory {
     id: string;
     storyId: string;
+    versionId: string; // The specific version ID when this history was created/active
     entityId: string;
     content: string; // Restored
     createdAt: number;

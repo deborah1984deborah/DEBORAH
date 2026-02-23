@@ -1,0 +1,110 @@
+import { useState, useCallback } from 'react';
+import { Story, StoryLoreRelation, LoreItem } from '../../types';
+
+interface UseWombGenerationProps {
+    lang: 'ja' | 'en';
+    apiKey: string;
+    aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
+    content: string;
+    setContent: (c: string) => void;
+    currentStoryId: string | null;
+    setCurrentStoryId: (id: string) => void;
+    savedStories: Story[];
+    globalRelations: StoryLoreRelation[];
+    activeMommyIds: string[];
+    activeNerdIds: string[];
+    activeLoreIds: string[];
+    saveGlobalStoryState: (id: string, content: string, type: 'manual' | 'generate_pre' | 'generate_post', m: string[], n: string[], l: string[]) => void;
+    lastSavedContentRef: React.MutableRefObject<string>;
+
+    showWombDebugInfo: boolean;
+    buildWombContext: () => Promise<{ systemInstruction: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>;
+}
+
+export const useWombGeneration = ({
+    lang, apiKey, aiModel, content, setContent, currentStoryId, setCurrentStoryId,
+    activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState,
+    lastSavedContentRef, showWombDebugInfo, buildWombContext
+}: UseWombGenerationProps) => {
+
+    const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+    // WOMB Debug State
+    const [debugSystemPrompt, setDebugSystemPrompt] = useState<string>('');
+    const [debugInputText, setDebugInputText] = useState<string>('');
+    const [debugMatchedEntities, setDebugMatchedEntities] = useState<LoreItem[]>([]);
+
+    // Action: Save System (Generate Story)
+    const handleSave = useCallback(async () => {
+        if (!content.trim()) return;
+
+        setIsGenerating(true);
+
+        try {
+            const { callGemini } = await import('../../utils/gemini');
+
+            // Call the shared context builder
+            const { systemInstruction, cleanedContent, matchedLoreItems } = await buildWombContext();
+
+            // Set debug info
+            if (showWombDebugInfo) {
+                setDebugSystemPrompt(systemInstruction);
+                setDebugInputText(cleanedContent);
+                setDebugMatchedEntities(matchedLoreItems);
+            }
+
+            let newId = currentStoryId;
+            if (!newId) {
+                newId = Date.now().toString();
+                setCurrentStoryId(newId);
+            }
+
+            // Save PRE-GEN if content changed
+            if (content !== lastSavedContentRef.current) {
+                saveGlobalStoryState(
+                    newId,
+                    content,
+                    'generate_pre',
+                    activeMommyIds,
+                    activeNerdIds,
+                    activeLoreIds
+                );
+            }
+
+            // Call the Gemeni API
+            const generatedText = await callGemini(apiKey, cleanedContent, aiModel, systemInstruction);
+
+            // Append generated text
+            const newContent = content + '\n' + generatedText;
+            setContent(newContent);
+
+            // Save POST-GEN via helper
+            saveGlobalStoryState(
+                newId,
+                newContent,
+                'generate_post',
+                activeMommyIds,
+                activeNerdIds,
+                activeLoreIds
+            );
+
+        } catch (error) {
+            console.error('Generation failed:', error);
+            alert(lang === 'ja' ? '生成に失敗しました。' : 'Generation failed.');
+        } finally {
+            setIsGenerating(false);
+        }
+    }, [
+        apiKey, aiModel, content, currentStoryId,
+        activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, lang,
+        lastSavedContentRef, showWombDebugInfo, buildWombContext, setCurrentStoryId, setContent
+    ]);
+
+    return {
+        isGenerating,
+        debugSystemPrompt,
+        debugInputText,
+        debugMatchedEntities,
+        handleSave
+    };
+};

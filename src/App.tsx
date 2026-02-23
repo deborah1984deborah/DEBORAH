@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MommySystem } from './components/mommy/MommySystem'
 import { WombSystem } from './components/womb/WombSystem'
 import { ApiKeyWarning } from './components/shared/ApiKeyWarning';
@@ -60,6 +60,14 @@ function App() {
             right: '3.5%'
         }
         : {}
+
+    // Sync body background to prevent pink bleed when content pushes past 100vh
+    useEffect(() => {
+        document.body.style.backgroundColor = appBackground;
+        document.body.style.transition = 'background-color 0.5s ease-in-out';
+        document.documentElement.style.backgroundColor = appBackground;
+        document.documentElement.style.transition = 'background-color 0.5s ease-in-out';
+    }, [appBackground]);
 
     // Determine overlay color class based on transition direction
     const overlayClass = transitionType === 'to-MOMMY' ? 'pink' : ''

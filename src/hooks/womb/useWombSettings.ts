@@ -12,9 +12,19 @@ export const useWombSettings = () => {
         return stored ? Number(stored) : 300;
     });
 
+    const [wombContextLength, setWombContextLength] = useState<number>(() => {
+        const stored = localStorage.getItem('womb_context_length');
+        return stored ? Number(stored) : 10000;
+    });
+
     const [keywordScanRange, setKeywordScanRange] = useState<number>(() => {
         const stored = localStorage.getItem('womb_keyword_scan_range');
-        return stored ? Number(stored) : 2000;
+        return stored ? Number(stored) : 10000;
+    });
+
+    const [activeCordHistoryInterval, setActiveCordHistoryInterval] = useState<number>(() => {
+        const stored = localStorage.getItem('womb_active_cord_history_interval');
+        return stored ? Number(stored) : 10000;
     });
 
     const [showSettings, setShowSettings] = useState<boolean>(false);
@@ -83,8 +93,16 @@ export const useWombSettings = () => {
     }, [cordOutputLength]);
 
     useEffect(() => {
+        localStorage.setItem('womb_context_length', wombContextLength.toString());
+    }, [wombContextLength]);
+
+    useEffect(() => {
         localStorage.setItem('womb_keyword_scan_range', keywordScanRange.toString());
     }, [keywordScanRange]);
+
+    useEffect(() => {
+        localStorage.setItem('womb_active_cord_history_interval', activeCordHistoryInterval.toString());
+    }, [activeCordHistoryInterval]);
 
     useEffect(() => {
         localStorage.setItem('cord_debug_info', showDebugInfo.toString());
@@ -97,7 +115,9 @@ export const useWombSettings = () => {
     return {
         wombOutputLength, setWombOutputLength,
         cordOutputLength, setCordOutputLength,
+        wombContextLength, setWombContextLength,
         keywordScanRange, setKeywordScanRange,
+        activeCordHistoryInterval, setActiveCordHistoryInterval,
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
         showWombDebugInfo, setShowWombDebugInfo,
