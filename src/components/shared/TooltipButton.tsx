@@ -8,6 +8,7 @@ interface TooltipButtonProps {
     style?: React.CSSProperties;
     placement?: 'top' | 'bottom' | 'left' | 'right';
     variant?: 'default' | 'neon-blue';
+    disabled?: boolean;
 }
 
 export const TooltipButton: React.FC<TooltipButtonProps> = ({
@@ -16,7 +17,8 @@ export const TooltipButton: React.FC<TooltipButtonProps> = ({
     label,
     style,
     placement = 'bottom',
-    variant = 'default'
+    variant = 'default',
+    disabled = false
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -64,8 +66,8 @@ export const TooltipButton: React.FC<TooltipButtonProps> = ({
 
     // Dynamic styles based on variant
     const buttonColor = variant === 'neon-blue'
-        ? (isHovered ? '#38bdf8' : 'rgba(56, 189, 248, 0.7)')
-        : (isHovered ? 'white' : '#94a3b8');
+        ? (isHovered && !disabled ? '#38bdf8' : 'rgba(56, 189, 248, 0.7)')
+        : (isHovered && !disabled ? 'white' : '#94a3b8');
 
     const tooltipBg = variant === 'neon-blue'
         ? 'rgba(15, 23, 42, 0.95)'
@@ -86,18 +88,20 @@ export const TooltipButton: React.FC<TooltipButtonProps> = ({
                 style={{
                     background: 'transparent',
                     border: 'none',
-                    cursor: 'pointer',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
                     color: buttonColor,
                     padding: '0.2rem',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     transition: 'all 0.2s',
-                    filter: variant === 'neon-blue' && isHovered ? 'drop-shadow(0 0 4px rgba(56, 189, 248, 0.5))' : 'none'
+                    opacity: disabled ? 0.3 : 1,
+                    filter: variant === 'neon-blue' && isHovered && !disabled ? 'drop-shadow(0 0 4px rgba(56, 189, 248, 0.5))' : 'none'
                 }}
-                onClick={onClick}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
+                onClick={disabled ? undefined : onClick}
+                onMouseEnter={disabled ? undefined : handleMouseEnter}
+                onMouseLeave={disabled ? undefined : handleMouseLeave}
+                disabled={disabled}
             >
                 {icon}
             </button>

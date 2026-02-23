@@ -290,7 +290,7 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                     alignItems: 'center'
                 }}>
                     <span style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>WOMB :: EDITOR</span>
-                    {displayTitle && (
+                    {displayTitle && content.split('\n')[0].trim() !== '' && (
                         <>
                             <span style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{' - [ '}</span>
                             <span style={{
@@ -312,6 +312,7 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                         <TooltipButton
                             label="Toggle Test ViewZone"
                             onClick={handleToggleTestViewZone}
+                            disabled={isLocked}
                             icon={
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a2 2 0 0 0 1.808 2.95h10.944a2 2 0 0 0 1.808-2.95l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
@@ -324,6 +325,7 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                     <TooltipButton
                         label="Save"
                         onClick={onManualSave || (() => { console.log("Manual save not provided"); })}
+                        disabled={isLocked}
                         icon={
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
@@ -335,6 +337,7 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                     <TooltipButton
                         label="Insert AI Instruction"
                         onClick={handleInsertRegion}
+                        disabled={isLocked}
                         icon={
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -348,6 +351,7 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                     <TooltipButton
                         label="Open Story"
                         onClick={onOpenFileList}
+                        disabled={isLocked}
                         icon={
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
@@ -357,6 +361,7 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                     <TooltipButton
                         label="New Story"
                         onClick={onNewStory}
+                        disabled={isLocked}
                         icon={
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M12 20h9"></path>

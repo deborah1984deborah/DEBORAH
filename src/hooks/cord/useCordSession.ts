@@ -12,6 +12,12 @@ export const useCordSession = (currentStoryId?: string) => {
 
     // Default chat scope preference
     const [chatScope, setChatScope] = useState<'global' | 'story'>('story');
+    const [isNewChatAwareOfWombStory, setIsNewChatAwareOfWombStory] = useState<boolean>(true);
+
+    // Sync isNewChatAwareOfWombStory with chatScope (when chatScope changes)
+    useEffect(() => {
+        setIsNewChatAwareOfWombStory(chatScope === 'story');
+    }, [chatScope]);
 
     // 1. Load Sessions on Mount
     useEffect(() => {
@@ -36,6 +42,21 @@ export const useCordSession = (currentStoryId?: string) => {
         }
     }, [currentSessionId]);
 
+    // 3. Reset Session when Story Changes (if currently in Story Scope)
+    useEffect(() => {
+        if (currentSessionId) {
+            // we need to look up the active session from state
+            const activeSession = sessions.find(s => s.id === currentSessionId);
+            if (activeSession && !activeSession.isGlobal) {
+                // It is a story-scoped chat. If the story ID changes, reset.
+                if (activeSession.storyId !== currentStoryId) {
+                    setCurrentSessionId(null);
+                    setMessages([]);
+                }
+            }
+        }
+    }, [currentStoryId, currentSessionId, sessions]);
+
     // Helper: Save Sessions to LocalStorage
     const saveSessionsToStorage = (updatedSessions: ChatSession[]) => {
         localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(updatedSessions));
@@ -49,7 +70,7 @@ export const useCordSession = (currentStoryId?: string) => {
     };
 
     // Action: Add Message (Handles Validation & Saving locally)
-    const addMessage = (role: 'user' | 'ai' | 'system' | 'function', content: string, sessionIdOverride?: string, functionCall?: any, rawParts?: any[]) => {
+    const addMessage = (role: 'user' | 'ai' | 'system' | 'function', content: string, sessionIdOverride?: string, functionCall?: any, rawParts?: any[], thoughtSummary?: string) => {
         // ALWAYS read from localStorage first to prevent closure staleness during async calls
         const storedSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
         let currentSessions: ChatSession[] = storedSessionsStr ? JSON.parse(storedSessionsStr) : sessions;
@@ -58,14 +79,20 @@ export const useCordSession = (currentStoryId?: string) => {
 
         // 1. If no session is active, create one NOW
         if (!activeSessionId) {
-            const isGlobalScope = chatScope === 'global';
+            const isGlobalScope = chatScope === 'global' || !currentStoryId;
+
+            // Automatically fallback UI state to global if story scope was attempted without a story
+            if (chatScope === 'story' && !currentStoryId) {
+                console.warn("[CORD] Attempted to start Story Scope chat without an active story. Falling back to Global Scope.");
+                setChatScope('global');
+            }
 
             const newSession: ChatSession = {
                 id: Date.now().toString(),
                 title: 'New Chat',
                 storyId: isGlobalScope ? undefined : currentStoryId,
                 isGlobal: isGlobalScope,
-                isAwareOfWombStory: !isGlobalScope, // Explicitly set Context awareness
+                isAwareOfWombStory: isGlobalScope ? false : isNewChatAwareOfWombStory, // Explicitly set Context awareness
                 createdAt: Date.now(),
                 updatedAt: Date.now()
             };
@@ -87,7 +114,8 @@ export const useCordSession = (currentStoryId?: string) => {
             content,
             createdAt: Date.now(),
             functionCall,
-            rawParts
+            rawParts,
+            thoughtSummary
         };
 
         // 3. Save Message: Read FRESH from local storage
@@ -160,6 +188,24 @@ export const useCordSession = (currentStoryId?: string) => {
         localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + currentSessionId, JSON.stringify(updatedMessages));
     };
 
+    // --- Background History Event Listener ---
+    useEffect(() => {
+        const handleAddBackgroundMessage = (event: Event) => {
+            const customEvent = event as CustomEvent<{ role: 'system' | 'function', content: string }>;
+            if (customEvent.detail) {
+                // Determine the correct role, default to system if omitted
+                const role = customEvent.detail.role || 'system';
+                // Add message will automatically create a new session if one doesn't exist
+                addMessage(role, customEvent.detail.content);
+            }
+        };
+
+        window.addEventListener('cord:add-background-message', handleAddBackgroundMessage);
+        return () => {
+            window.removeEventListener('cord:add-background-message', handleAddBackgroundMessage);
+        };
+    }, [addMessage]);
+
     return {
         sessions,
         currentSessionId,
@@ -167,6 +213,8 @@ export const useCordSession = (currentStoryId?: string) => {
         messages,
         chatScope,
         setChatScope,
+        isNewChatAwareOfWombStory,
+        setIsNewChatAwareOfWombStory,
         startNewSession,
         addMessage,
         deleteSession,

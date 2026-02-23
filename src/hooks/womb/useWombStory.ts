@@ -14,6 +14,7 @@ interface UseWombStoryProps {
     historyLogs: StoryEntityHistory[];
     setHistoryLogs: (logs: StoryEntityHistory[]) => void;
     getActiveLineage: (currentVersionId: string | null, versions: any[]) => Set<string>;
+    onStorySaved?: (storyId: string, content: string, saveType: 'manual' | 'generate_pre' | 'generate_post') => void;
 }
 
 export const useWombStory = ({
@@ -23,7 +24,7 @@ export const useWombStory = ({
     activeNerdIds, setActiveNerdIds,
     activeLoreIds, setActiveLoreIds,
     historyLogs, setHistoryLogs,
-    getActiveLineage
+    getActiveLineage, onStorySaved
 }: UseWombStoryProps) => {
 
     // Story Management State
@@ -172,8 +173,12 @@ export const useWombStory = ({
         setGlobalRelations(updatedGlobalRelations);
         localStorage.setItem('womb_story_relations', JSON.stringify(updatedGlobalRelations));
 
+        if (onStorySaved) {
+            onStorySaved(targetId, targetContent, saveType);
+        }
+
         return { newStories, updatedGlobalRelations };
-    }, [saveStoryData, saveToLocalStorage, setGlobalRelations]);
+    }, [saveStoryData, saveToLocalStorage, setGlobalRelations, onStorySaved]);
 
     // Action: Manual Save (No Generation)
     const handleManualSave = useCallback(() => {

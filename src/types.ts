@@ -56,6 +56,7 @@ export interface StoryVersion {
     content: string; // The text content at this version
     savedAt: number; // Timestamp of save
     saveType: 'manual' | 'generate_pre' | 'generate_post'; // How this version was created
+    autoHistoryGenerated?: boolean; // Flag indicating if CORD background history was generated for this version
 }
 
 export interface Story {
@@ -85,6 +86,11 @@ export interface StoryEntityHistory {
     createdAt: number;
 }
 
+export interface StoryEntityHistoryInvalidation {
+    historyId: string; // The ID of the history record being invalidated
+    versionId: string; // The specific version ID of the story when this invalidation occurred
+}
+
 // CORD Chat Interfaces
 export interface ChatSession {
     id: string;
@@ -103,4 +109,6 @@ export interface ChatMessage {
     content: string;
     createdAt: number;
     functionCall?: any; // Added for Tool Calling
+    rawParts?: any[]; // Added to preserve Gemini API 'thought' or 'thought_signature' across conversation history
+    thoughtSummary?: string; // Human-readable output from the model's Thinking Process
 }

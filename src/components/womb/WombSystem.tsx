@@ -28,6 +28,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         wombContextLength, setWombContextLength,
         keywordScanRange, setKeywordScanRange,
         activeCordHistoryInterval, setActiveCordHistoryInterval,
+        isCordActiveModeEnabled, setIsCordActiveModeEnabled,
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
         showWombDebugInfo, setShowWombDebugInfo,
@@ -47,12 +48,13 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         globalRelations,
         historyLogs,
 
-        // Debug State
         debugSystemPrompt,
         debugInputText,
         debugMatchedEntities,
 
         // Actions
+        invalidations,
+        getActiveLineage,
         handleSave,
         handleManualSave,
         handleDelete,
@@ -73,7 +75,11 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         redoCandidates,
         setRedoCandidates,
         handleSelectRedoBranch,
-        currentStoryVersions
+        currentStoryVersions,
+
+        // Background History
+        isBackgroundProcessing,
+        processingTargetName
     } = useWombSystem({ lang });
 
     // Listen to CORD's command to add history
@@ -113,14 +119,13 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
 
     // State to track which debug panel is functionally in front
     const [activeDebugPanel, setActiveDebugPanel] = useState<'womb' | 'cord'>('womb');
-    const [isCordActiveModeEnabled, setIsCordActiveModeEnabled] = useState(false);
     const [isCordProcessing, setIsCordProcessing] = useState(false);
     const [cordDebugData, setCordDebugData] = useState<{ systemPrompt: string, inputText: string, matchedEntities: any[] }>({ systemPrompt: '', inputText: '', matchedEntities: [] });
 
     // Ref for SETTINGS button to align the portal
     const settingsBtnRef = React.useRef<HTMLButtonElement>(null);
 
-    // Load settings from localStorage on mount
+    // Load settings from localStorage on mount (handled partially here, but mostly inside hooks now)
     React.useEffect(() => {
         const savedApiKey = localStorage.getItem('womb_api_key');
         if (savedApiKey) {
@@ -146,15 +151,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         if (savedKeywordScanRange) {
             setKeywordScanRange(parseInt(savedKeywordScanRange));
         }
-        const savedCordActiveMode = localStorage.getItem('womb_cord_active_mode');
-        if (savedCordActiveMode !== null) {
-            setIsCordActiveModeEnabled(savedCordActiveMode === 'true');
-        }
-    }, [setApiKey, setTmdbAccessToken, setAiModel, setWombOutputLength, setCordOutputLength, setKeywordScanRange, setIsCordActiveModeEnabled]);
-
-    React.useEffect(() => {
-        localStorage.setItem('womb_cord_active_mode', isCordActiveModeEnabled.toString());
-    }, [isCordActiveModeEnabled]);
+    }, [setApiKey, setTmdbAccessToken, setAiModel, setWombOutputLength, setCordOutputLength, setKeywordScanRange]);
 
 
     return (
@@ -204,7 +201,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     canRedo={canRedo}
                     redoBranchCount={redoBranchCount}
                     showWombDebugInfo={showWombDebugInfo}
-                    isCordProcessing={isCordProcessing}
+                    isCordProcessing={isCordProcessing || isBackgroundProcessing}
                 />
 
                 {/* CORD: Chat Interface (Right) */}
@@ -312,6 +309,10 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                             getWombContext={buildWombContext}
                             onProcessingChange={setIsCordProcessing}
                             onDebugDataChange={setCordDebugData}
+
+                            // Background auto-history integration
+                            isBackgroundProcessing={isBackgroundProcessing}
+                            processingTargetName={processingTargetName}
                         />
                     </div>
                 </div>
@@ -343,6 +344,9 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     setActiveLoreIds={setActiveLoreIds}
                     // History Props
                     historyLogs={historyLogs}
+                    invalidations={invalidations}
+                    getActiveLineage={getActiveLineage}
+                    storyVersions={currentStoryVersions}
                     currentStoryId={currentStoryId}
                     onAddHistory={handleAddHistory} // Pass the handler
                     onUpdateHistory={handleUpdateHistory}

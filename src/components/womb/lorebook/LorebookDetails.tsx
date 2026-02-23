@@ -11,6 +11,9 @@ interface LorebookDetailsProps {
 
     // History Props
     historyLogs: StoryEntityHistory[];
+    invalidations: import('../../../types').StoryEntityHistoryInvalidation[];
+    getActiveLineage: (currentVersionId: string | null, versions: any[]) => Set<string>;
+    storyVersions: any[];
     currentStoryId: string | null;
     onAddHistory: (entityId: string) => string;
     onUpdateHistory: (id: string, content: string) => void;
@@ -21,7 +24,7 @@ interface LorebookDetailsProps {
 export const LorebookDetails: React.FC<LorebookDetailsProps> = ({
     lang, onClose, selectedItem,
     showHistory, setShowHistory,
-    historyLogs, currentStoryId, onAddHistory, onUpdateHistory, onSaveHistory, onDeleteHistory
+    historyLogs, invalidations, getActiveLineage, storyVersions, currentStoryId, onAddHistory, onUpdateHistory, onSaveHistory, onDeleteHistory
 }) => {
     return (
         <div style={{
@@ -212,6 +215,9 @@ export const LorebookDetails: React.FC<LorebookDetailsProps> = ({
 
                                 <LorebookHistory
                                     historyLogs={historyLogs}
+                                    invalidations={invalidations}
+                                    getActiveLineage={getActiveLineage}
+                                    storyVersions={storyVersions}
                                     selectedItemId={selectedItem.id}
                                     currentStoryId={currentStoryId}
                                     onAddHistory={onAddHistory}

@@ -12,9 +12,15 @@ interface CordChatProps {
     getWombContext?: () => Promise<{ systemInstruction: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>;
     onProcessingChange?: (isProcessing: boolean) => void;
     onDebugDataChange?: (debugData: { systemPrompt: string, inputText: string, matchedEntities: any[] }) => void;
+    isBackgroundProcessing?: boolean;
+    processingTargetName?: string | null;
 }
 
-export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDebugInfo = false, apiKey, aiModel, getWombContext, onProcessingChange, onDebugDataChange }) => {
+export const CordChat: React.FC<CordChatProps> = ({
+    lang, currentStoryId, showDebugInfo = false, apiKey, aiModel,
+    getWombContext, onProcessingChange, onDebugDataChange,
+    isBackgroundProcessing = false, processingTargetName = null
+}) => {
     // Integrate Custom Hook
     const {
         sessions,
@@ -31,6 +37,8 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
         toggleWombAwareness,
         chatScope,
         setChatScope,
+        isNewChatAwareOfWombStory,
+        setIsNewChatAwareOfWombStory,
         cordDebugSystemPrompt,
         cordDebugInputText,
         cordDebugMatchedEntities
@@ -45,6 +53,8 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
     const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const isLocked = isTyping || isBackgroundProcessing;
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -139,6 +149,44 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                     Sessions: {sessions.length} | ID: {currentSessionId || 'null'}
                 </div>
             )}
+
+            {/* BACKGROUND PROCESSING INDICATOR */}
+            {isBackgroundProcessing && (
+                <div style={{
+                    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                    borderBottom: '1px solid rgba(56, 189, 248, 0.2)',
+                    padding: '0.4rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    color: '#38bdf8',
+                    fontSize: '0.8rem',
+                    zIndex: 10,
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+                }}>
+                    {/* Spinner */}
+                    <svg style={{ animation: 'spin 1.5s linear infinite' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="2" x2="12" y2="6"></line>
+                        <line x1="12" y1="18" x2="12" y2="22"></line>
+                        <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                        <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                        <line x1="2" y1="12" x2="6" y2="12"></line>
+                        <line x1="18" y1="12" x2="22" y2="12"></line>
+                        <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                        <line x1="16.24" y1="4.93" x2="19.07" y2="7.76"></line>
+                    </svg>
+                    <span>
+                        {lang === 'ja'
+                            ? `Active CORD: ヒストリーを自動更新中... ${processingTargetName ? `(${processingTargetName})` : ''}`
+                            : `Active CORD: Auto-updating history... ${processingTargetName ? `(${processingTargetName})` : ''}`}
+                    </span>
+                    {/* Inject spin keyframes here for simplicity since we don't have a global css yet */}
+                    <style>{`
+                        @keyframes spin { 100% { transform: rotate(360deg); } }
+                    `}</style>
+                </div>
+            )}
+
             {/* Message List Area (Relative Wrapper for Floating Toolbar) */}
             <div style={{
                 flex: 1,
@@ -284,13 +332,15 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                                     }}>
                                         {/* Edit Button */}
                                         <button
+                                            disabled={isLocked}
                                             onClick={() => {
                                                 setEditingMessageId(msg.id);
                                                 setEditValue(msg.content);
                                             }}
                                             style={{
-                                                background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', padding: '0.2rem',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                background: 'none', border: 'none', color: '#38bdf8', cursor: isLocked ? 'not-allowed' : 'pointer', padding: '0.2rem',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                opacity: isLocked ? 0.3 : 1
                                             }}
                                             title={lang === 'ja' ? '編集' : 'Edit'}
                                         >
@@ -301,14 +351,16 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                                         </button>
                                         {/* Delete Button */}
                                         <button
+                                            disabled={isLocked}
                                             onClick={() => {
                                                 if (confirm(lang === 'ja' ? 'このメッセージを削除しますか？' : 'Delete this message?')) {
                                                     deleteMessage(msg.id);
                                                 }
                                             }}
                                             style={{
-                                                background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.2rem',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                background: 'none', border: 'none', color: '#f87171', cursor: isLocked ? 'not-allowed' : 'pointer', padding: '0.2rem',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                opacity: isLocked ? 0.3 : 1
                                             }}
                                             title={lang === 'ja' ? '削除' : 'Delete'}
                                         >
@@ -378,8 +430,37 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                                             </div>
                                         </div>
                                     ) : (
-                                        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                            {msg.content}
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            {msg.role === 'ai' && (msg.thoughtSummary || (showDebugInfo && msg.rawParts?.some(p => p.thought_signature || p.thoughtSignature))) && (
+                                                <details style={{
+                                                    fontSize: '0.8rem',
+                                                    color: 'rgba(255,255,255,0.6)',
+                                                    backgroundColor: 'rgba(0,0,0,0.2)',
+                                                    padding: '0.4rem',
+                                                    borderRadius: '4px',
+                                                    marginBottom: '0.5rem',
+                                                    cursor: 'pointer'
+                                                }}>
+                                                    <summary style={{ outline: 'none', userSelect: 'none', fontWeight: 'bold' }}>
+                                                        {lang === 'ja' ? '💭 思考プロセス (Thinking)' : '💭 Thinking Process'}
+                                                    </summary>
+                                                    <div style={{ marginTop: '0.5rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem' }}>
+                                                        {msg.thoughtSummary && (
+                                                            <div style={{ marginBottom: '0.5rem' }}>{msg.thoughtSummary}</div>
+                                                        )}
+                                                        {showDebugInfo && msg.rawParts && (
+                                                            msg.rawParts.filter(p => p.thought_signature || p.thoughtSignature).map((p, i) => (
+                                                                <div key={`sig-${i}`} style={{ color: '#fbbf24', fontSize: '0.7rem', wordBreak: 'break-all', fontFamily: 'monospace', marginTop: '0.5rem' }}>
+                                                                    [Signature {i + 1}]: {p.thought_signature || p.thoughtSignature}
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </details>
+                                            )}
+                                            <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                                {msg.content}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -429,25 +510,27 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                         gap: '0.5rem',
                         fontSize: '0.8rem',
                         color: '#94a3b8',
-                        cursor: 'pointer',
+                        cursor: isLocked ? 'default' : 'pointer',
                         userSelect: 'none',
                         marginTop: '6px' // Pushed down slightly more 
                     }}>
                         <input
                             type="checkbox"
-                            checked={activeSession?.isAwareOfWombStory || false}
+                            checked={currentSessionId ? (activeSession?.isAwareOfWombStory || false) : isNewChatAwareOfWombStory}
                             onChange={(e) => {
                                 if (currentSessionId) {
                                     toggleWombAwareness(currentSessionId, e.target.checked);
+                                } else {
+                                    setIsNewChatAwareOfWombStory(e.target.checked);
                                 }
                             }}
-                            disabled={!currentSessionId}
+                            disabled={isLocked}
                             style={{
                                 accentColor: '#38bdf8',
                                 width: '14px',
                                 height: '14px',
-                                cursor: currentSessionId ? 'pointer' : 'default',
-                                opacity: currentSessionId ? 1 : 0.5
+                                cursor: isLocked ? 'not-allowed' : 'pointer',
+                                opacity: isLocked ? 0.5 : 1
                             }}
                         />
                         {lang === 'ja' ? 'CORDがWOMBのストーリーを把握する' : 'CORD is aware of WOMB Story'}
@@ -461,6 +544,7 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                             placement="top"
                             variant="neon-blue"
                             onClick={handleSaveHistory}
+                            disabled={isLocked}
                             icon={
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
@@ -474,6 +558,7 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                             placement="top"
                             variant="neon-blue"
                             onClick={handleNewChat}
+                            disabled={isLocked}
                             icon={
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -492,8 +577,8 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                 display: 'flex',
                 gap: '1rem',
                 alignItems: 'flex-end',
-                opacity: isTyping ? 0.5 : 1, // Visually dim when locked
-                pointerEvents: isTyping ? 'none' : 'auto', // Lock inputs
+                opacity: isLocked ? 0.5 : 1, // Visually dim when locked
+                pointerEvents: isLocked ? 'none' : 'auto', // Lock inputs
                 transition: 'opacity 0.2s'
             }}>
                 <textarea
@@ -501,7 +586,7 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={lang === 'ja' ? 'メッセージを入力...' : 'Type a message...'}
-                    disabled={isTyping}
+                    disabled={isLocked}
                     style={{
                         flex: 1,
                         backgroundColor: 'rgba(0, 0, 0, 0.2)',
@@ -514,25 +599,25 @@ export const CordChat: React.FC<CordChatProps> = ({ lang, currentStoryId, showDe
                         maxHeight: '120px',
                         outline: 'none',
                         fontFamily: 'inherit',
-                        cursor: isTyping ? 'not-allowed' : 'text'
+                        cursor: isLocked ? 'not-allowed' : 'text'
                     }}
                     rows={1}
                 />
                 <button
                     onClick={handleSend}
-                    disabled={isTyping}
+                    disabled={isLocked}
                     style={{
                         backgroundColor: '#38bdf8',
                         color: '#0f172a',
                         border: 'none',
                         borderRadius: '8px',
                         padding: '0.8rem 1.2rem',
-                        cursor: isTyping ? 'not-allowed' : 'pointer',
+                        cursor: isLocked ? 'not-allowed' : 'pointer',
                         fontWeight: 'bold',
                         transition: 'opacity 0.2s'
                     }}
-                    onMouseOver={(e) => { if (!isTyping) e.currentTarget.style.opacity = '0.9'; }}
-                    onMouseOut={(e) => { if (!isTyping) e.currentTarget.style.opacity = '1'; }}
+                    onMouseOver={(e) => { if (!isLocked) e.currentTarget.style.opacity = '0.9'; }}
+                    onMouseOut={(e) => { if (!isLocked) e.currentTarget.style.opacity = '1'; }}
                 >
                     {lang === 'ja' ? '送信' : 'Send'}
                 </button>

@@ -91,6 +91,7 @@ export interface ChatMessageData {
     };
     // Include parts array explicitly when available to preserve Gemini's 'thought' or 'thought_signature' states for tool calling
     rawParts?: any[];
+    thoughtSummary?: string;
 }
 
 export const callGeminiChat = async (
@@ -99,7 +100,7 @@ export const callGeminiChat = async (
     model: GeminiModel = 'gemini-2.5-flash',
     systemInstruction?: string,
     tools?: any[]
-): Promise<string | { functionCall: { name: string, args: any }, rawParts: any[] }> => {
+): Promise<{ text?: string, functionCall?: { name: string, args: any }, rawParts: any[], thoughtSummary?: string }> => {
     if (!apiKey) {
         throw new Error('API Key is missing');
     }
@@ -122,15 +123,15 @@ export const callGeminiChat = async (
                             }
                         }]
                     };
-                } else if (msg.functionCall && msg.rawParts) {
-                    // When the AI made a function call in the history, we MUST pass back the exact parts
-                    // it generated, which includes any `thought` text and `functionCall` dict with `thought_signature`.
+                } else if (msg.rawParts && msg.role === 'ai') {
+                    // When the AI made ANY response, we MUST pass back the exact parts
+                    // it generated, which includes any `thought` text, `thought_signature` or `functionCall`.
                     return {
                         role: 'model',
                         parts: msg.rawParts
                     };
                 } else if (msg.functionCall) {
-                    // Fallback for older stored messages that lack rawParts
+                    // Fallback for older stored messages that lack rawParts but had a function call
                     return {
                         role: 'model',
                         parts: [{
@@ -163,6 +164,16 @@ export const callGeminiChat = async (
             requestBody.tools = tools;
         }
 
+        // Enable Thinking Process ONLY for models that explicitly support it (like Gemini 3.1 Pro)
+        if (model.includes('3.')) {
+            if (!requestBody.generationConfig) {
+                requestBody.generationConfig = {};
+            }
+            requestBody.generationConfig.thinkingConfig = {
+                includeThoughts: true
+            };
+        }
+
         console.log("Gemini API Request Body:", JSON.stringify(requestBody, null, 2));
 
         const response = await fetch(`${getGeminiUrl(model)}?key=${apiKey}`, {
@@ -187,21 +198,31 @@ export const callGeminiChat = async (
 
         const data: GeminiResponse = await response.json();
 
-        const parts = data.candidates?.[0]?.content?.parts;
-        const functionCallPart = parts?.find(p => p.functionCall);
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        const functionCallPart = parts.find(p => p.functionCall);
+
+        // Extract all thought strings (where thought boolean is true, but content is in text)
+        const thoughtTextParts = parts.filter(p => p.thought === true && typeof p.text === 'string').map(p => p.text);
+        const thoughtSummary = thoughtTextParts.length > 0 ? thoughtTextParts.join('\n\n') : undefined;
 
         if (functionCallPart?.functionCall) {
-            return { functionCall: functionCallPart.functionCall, rawParts: parts || [] };
+            return { functionCall: functionCallPart.functionCall, rawParts: parts, thoughtSummary };
         }
 
-        const textPart = parts?.find(p => p.text);
+        // Extract the actual response text (where it's NOT a thought)
+        const textPart = parts.find(p => !p.thought && p.text);
         const text = textPart?.text;
+
+        if (!text && thoughtSummary) {
+            // Models sometimes fail to output final text if thinking takes too long, but we must return something to avoid UI crashes.
+            return { text: '(System: The AI thought process completed, but it did not provide a final response text.)', rawParts: parts, thoughtSummary };
+        }
 
         if (!text) {
             throw new Error('No text or function call generated from Gemini Chat');
         }
 
-        return text;
+        return { text, rawParts: parts, thoughtSummary };
     } catch (error) {
         console.error('Gemini Chat API Call Failed:', error);
         throw error;

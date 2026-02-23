@@ -27,6 +27,11 @@ export const useWombSettings = () => {
         return stored ? Number(stored) : 10000;
     });
 
+    const [isCordActiveModeEnabled, setIsCordActiveModeEnabled] = useState<boolean>(() => {
+        const stored = localStorage.getItem('womb_cord_active_mode');
+        return stored === 'true'; // Default is false for WIP feature unless explicitly enabled
+    });
+
     const [showSettings, setShowSettings] = useState<boolean>(false);
 
     const [showDebugInfo, setShowDebugInfo] = useState<boolean>(() => {
@@ -105,6 +110,10 @@ export const useWombSettings = () => {
     }, [activeCordHistoryInterval]);
 
     useEffect(() => {
+        localStorage.setItem('womb_cord_active_mode', isCordActiveModeEnabled.toString());
+    }, [isCordActiveModeEnabled]);
+
+    useEffect(() => {
         localStorage.setItem('cord_debug_info', showDebugInfo.toString());
     }, [showDebugInfo]);
 
@@ -118,6 +127,7 @@ export const useWombSettings = () => {
         wombContextLength, setWombContextLength,
         keywordScanRange, setKeywordScanRange,
         activeCordHistoryInterval, setActiveCordHistoryInterval,
+        isCordActiveModeEnabled, setIsCordActiveModeEnabled,
         showSettings, setShowSettings,
         showDebugInfo, setShowDebugInfo,
         showWombDebugInfo, setShowWombDebugInfo,

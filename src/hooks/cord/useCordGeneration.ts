@@ -141,7 +141,7 @@ export const useCordGeneration = ({
             // Call Chat API
             const response = await callGeminiChat(apiKey, currentMessages as any, aiModel, systemPrompt, cordTools);
 
-            if (typeof response === 'object' && response.functionCall) {
+            if (response.functionCall) {
                 // Handle Function Call
                 if (response.functionCall.name === 'insert_womb_instruction') {
                     const args = response.functionCall.args;
@@ -162,8 +162,8 @@ export const useCordGeneration = ({
                     const funcCallMsg: ChatMessageData = {
                         role: 'ai',
                         content: '',
-                        functionCall: typeof response === 'object' ? response.functionCall : undefined,
-                        rawParts: typeof response === 'object' ? response.rawParts : undefined
+                        functionCall: response.functionCall,
+                        rawParts: response.rawParts
                     };
                     const funcResMsg: ChatMessageData = {
                         role: 'function',
@@ -171,7 +171,7 @@ export const useCordGeneration = ({
                         functionCall: { name: 'insert_womb_instruction', args: {} }
                     };
 
-                    addMessage('ai', '', sessionId, typeof response === 'object' ? response.functionCall : undefined, typeof response === 'object' ? response.rawParts : undefined);
+                    addMessage('ai', '', sessionId, response.functionCall, response.rawParts, response.thoughtSummary);
                     addMessage('function', functionLogMsg, sessionId, { name: 'insert_womb_instruction', args: {} }); // We map 'function' back to API in gemini.ts
 
                     // Recurse to let AI give final string answer
@@ -180,8 +180,8 @@ export const useCordGeneration = ({
 
                     try {
                         const followUpResponse = await callGeminiChat(apiKey, followUpMessages as any, aiModel, systemPrompt, cordTools);
-                        if (typeof followUpResponse === 'string') {
-                            addMessage('ai', followUpResponse, sessionId);
+                        if (followUpResponse.text) {
+                            addMessage('ai', followUpResponse.text, sessionId, undefined, followUpResponse.rawParts, followUpResponse.thoughtSummary);
                         }
                     } catch (e) {
                         console.error("AI Follow up failed after function call", e);
@@ -295,8 +295,8 @@ export const useCordGeneration = ({
                     const funcCallMsg: ChatMessageData = {
                         role: 'ai',
                         content: '',
-                        functionCall: typeof response === 'object' ? response.functionCall : undefined,
-                        rawParts: typeof response === 'object' ? response.rawParts : undefined
+                        functionCall: response.functionCall,
+                        rawParts: response.rawParts
                     };
                     const funcResMsg: ChatMessageData = {
                         role: 'function',
@@ -304,24 +304,24 @@ export const useCordGeneration = ({
                         functionCall: { name: 'add_womb_history', args: {} }
                     };
 
-                    addMessage('ai', '', sessionId, typeof response === 'object' ? response.functionCall : undefined, typeof response === 'object' ? response.rawParts : undefined);
+                    addMessage('ai', '', sessionId, response.functionCall, response.rawParts, response.thoughtSummary);
                     addMessage('function', uiDisplayMsg, sessionId, { name: 'add_womb_history', args: {} });
 
                     const followUpMessages = [...currentMessages, funcCallMsg, funcResMsg];
 
                     try {
                         const followUpResponse = await callGeminiChat(apiKey, followUpMessages as any, aiModel, systemPrompt, cordTools);
-                        if (typeof followUpResponse === 'string') {
-                            addMessage('ai', followUpResponse, sessionId);
+                        if (followUpResponse.text) {
+                            addMessage('ai', followUpResponse.text, sessionId, undefined, followUpResponse.rawParts, followUpResponse.thoughtSummary);
                         }
                     } catch (e) {
                         console.error("AI Follow up failed after function call", e);
                         addMessage('ai', lang === 'ja' ? '処理を完了しましたが、応答でエラーが発生しました。' : 'Action completed, but failed to generate response.', sessionId);
                     }
                 }
-            } else if (typeof response === 'string') {
-                // Add the AI message
-                addMessage('ai', response, sessionId);
+            } else if (response.text) {
+                // Add the AI message along with its raw parts and thought summary
+                addMessage('ai', response.text, sessionId, undefined, response.rawParts, response.thoughtSummary);
 
                 // --- Auto Titling Logic ---
                 // Fetch fresh sessions from localStorage to avoid closure overwrite

@@ -17,6 +17,9 @@ export const LorebookModal: React.FC<{
     setActiveLoreIds: (ids: string[]) => void;
     // History Props
     historyLogs: StoryEntityHistory[];
+    invalidations: import('../../../types').StoryEntityHistoryInvalidation[];
+    getActiveLineage: (currentVersionId: string | null, versions: any[]) => Set<string>;
+    storyVersions: any[];
     currentStoryId: string | null;
     onAddHistory: (entityId: string) => string;
     onUpdateHistory: (id: string, content: string) => void;
@@ -28,7 +31,7 @@ export const LorebookModal: React.FC<{
     activeMommyIds, setActiveMommyIds,
     activeNerdIds, setActiveNerdIds,
     activeLoreIds, setActiveLoreIds,
-    historyLogs, currentStoryId, onAddHistory, onUpdateHistory, onSaveHistory, onDeleteHistory
+    historyLogs, invalidations, getActiveLineage, storyVersions, currentStoryId, onAddHistory, onUpdateHistory, onSaveHistory, onDeleteHistory
 }) => {
         const [activeTab, setActiveTab] = React.useState<'mommy' | 'nerd' | 'lore'>('mommy');
         const [selectedItem, setSelectedItem] = React.useState<LoreItem | null>(null);
@@ -86,6 +89,9 @@ export const LorebookModal: React.FC<{
                             showHistory={showHistory}
                             setShowHistory={setShowHistory}
                             historyLogs={historyLogs}
+                            invalidations={invalidations}
+                            getActiveLineage={getActiveLineage}
+                            storyVersions={storyVersions}
                             currentStoryId={currentStoryId}
                             onAddHistory={onAddHistory}
                             onUpdateHistory={onUpdateHistory}

@@ -32,6 +32,8 @@ export const useCordChat = (currentStoryId?: string) => {
         messages: session.messages,
         chatScope: session.chatScope,
         setChatScope: session.setChatScope,
+        isNewChatAwareOfWombStory: session.isNewChatAwareOfWombStory,
+        setIsNewChatAwareOfWombStory: session.setIsNewChatAwareOfWombStory,
         setCurrentSessionId: session.setCurrentSessionId,
         startNewSession: session.startNewSession,
         addMessage: session.addMessage,
