@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Story, StoryLoreRelation, LoreItem } from '../../types';
+import { Story, StoryLoreRelation, LoreItem, WombChatInteraction } from '../../types';
 
 interface UseWombGenerationProps {
     lang: 'ja' | 'en';
@@ -41,7 +41,7 @@ export const useWombGeneration = ({
         setIsGenerating(true);
 
         try {
-            const { callGemini } = await import('../../utils/gemini');
+            const { callGeminiWithThoughts } = await import('../../utils/gemini');
 
             // Call the shared context builder
             const { systemInstruction, dynamicStoryContext, cleanedContent, matchedLoreItems } = await buildWombContext();
@@ -74,8 +74,45 @@ export const useWombGeneration = ({
                 );
             }
 
-            // Call the Gemeni API
-            const generatedText = await callGemini(apiKey, payloadContent, aiModel, systemInstruction, aiThinkingLevel);
+            // Call the Gemeni API with Thoughts extraction
+            const { text: generatedText, rawParts, thoughtSummary } = await callGeminiWithThoughts(apiKey, payloadContent, aiModel, systemInstruction, aiThinkingLevel);
+
+            // Log the generation interactions
+            const now = Date.now();
+            const newInteractions: WombChatInteraction[] = [
+                {
+                    id: `interaction_${now}_sys`,
+                    storyId: newId,
+                    role: 'system',
+                    content: systemInstruction,
+                    createdAt: now
+                },
+                {
+                    id: `interaction_${now}_usr`,
+                    storyId: newId,
+                    role: 'user',
+                    content: payloadContent,
+                    createdAt: now + 1
+                },
+                {
+                    id: `interaction_${now}_ai`,
+                    storyId: newId,
+                    role: 'ai',
+                    content: generatedText,
+                    rawParts,
+                    thoughtSummary,
+                    createdAt: now + 2
+                }
+            ];
+
+            try {
+                const storageKey = `womb_chat_${newId}`;
+                const existingChatJson = localStorage.getItem(storageKey);
+                const existingChat: WombChatInteraction[] = existingChatJson ? JSON.parse(existingChatJson) : [];
+                localStorage.setItem(storageKey, JSON.stringify([...existingChat, ...newInteractions]));
+            } catch (e) {
+                console.error("Failed to save WOMB chat interactions to local storage", e);
+            }
 
             // Append generated text
             const newContent = content + '\n' + generatedText;

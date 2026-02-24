@@ -112,3 +112,14 @@ export interface ChatMessage {
     rawParts?: any[]; // Added to preserve Gemini API 'thought' or 'thought_signature' across conversation history
     thoughtSummary?: string; // Human-readable output from the model's Thinking Process
 }
+
+// WOMB Generation Interaction Log
+export interface WombChatInteraction {
+    id: string;
+    storyId: string;
+    role: 'user' | 'ai' | 'system';
+    content: string;
+    rawParts?: any[];
+    thoughtSummary?: string;
+    createdAt: number;
+}

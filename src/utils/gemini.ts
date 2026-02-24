@@ -29,13 +29,19 @@ interface GeminiResponse {
     };
 }
 
-export const callGemini = async (
+export interface CallGeminiResult {
+    text: string;
+    rawParts?: any[];
+    thoughtSummary?: string;
+}
+
+export const callGeminiWithThoughts = async (
     apiKey: string,
     prompt: string,
     model: GeminiModel = 'gemini-2.5-flash',
     systemInstruction?: string,
     aiThinkingLevel?: 'low' | 'medium' | 'high'
-): Promise<string> => {
+): Promise<CallGeminiResult> => {
     if (!apiKey) {
         throw new Error('API Key is missing');
     }
@@ -79,22 +85,45 @@ export const callGemini = async (
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorRawData = await response.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorRawData);
+            } catch (e) {
+                errorData = { error: { message: errorRawData } };
+            }
             throw new Error(errorData.error?.message || `API Error: ${response.status}`);
         }
 
         const data: GeminiResponse = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        const textPart = parts.find(p => !p.thought && p.text);
+        const text = textPart?.text;
+
+        const thoughtTextParts = parts.filter(p => p.thought === true && typeof p.text === 'string').map(p => p.text);
+        const thoughtSummary = thoughtTextParts.length > 0 ? thoughtTextParts.join('\n\n') : undefined;
 
         if (!text) {
             throw new Error('No text generated from Gemini');
         }
 
-        return text;
+        return { text, rawParts: parts, thoughtSummary };
     } catch (error) {
         console.error('Gemini API Call Failed:', error);
         throw error;
     }
+};
+
+export const callGemini = async (
+    apiKey: string,
+    prompt: string,
+    model: GeminiModel = 'gemini-2.5-flash',
+    systemInstruction?: string,
+    aiThinkingLevel?: 'low' | 'medium' | 'high'
+): Promise<string> => {
+    const res = await callGeminiWithThoughts(apiKey, prompt, model, systemInstruction, aiThinkingLevel);
+    return res.text;
 };
 
 // Interface for chat messages compatible with useCordChat
