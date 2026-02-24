@@ -404,6 +404,7 @@ export const useWombStory = ({
         setRedoCandidates,
         handleSelectRedoBranch,
         currentStoryVersions: currentActiveStory?.versions || [],
+        currentVersionId: currentActiveStory?.currentVersionId || null,
 
         displayTitle: content.split('\n')[0]?.trim() || "Untitled Story"
     };

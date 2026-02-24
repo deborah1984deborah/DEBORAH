@@ -2,6 +2,7 @@ import React from 'react';
 import { StoryEntityHistory } from '../../../types';
 
 interface LorebookHistoryProps {
+    lang: 'ja' | 'en';
     // History Props
     historyLogs: StoryEntityHistory[];
     invalidations: import('../../../types').StoryEntityHistoryInvalidation[];
@@ -9,32 +10,39 @@ interface LorebookHistoryProps {
     storyVersions: any[];
     selectedItemId: string;
     currentStoryId: string | null;
-    onAddHistory: (entityId: string) => string;
+    currentVersionId: string | null;
+    onAddHistory: (entityId: string, initialContent?: string) => string;
+    onAddFullHistory: (entityId: string, historyContent: string) => void;
     onUpdateHistory: (id: string, content: string) => void;
     onSaveHistory: () => void;
     onDeleteHistory: (id: string) => void;
+    onToggleInvalidateHistory: (historyId: string, currentVersionId: string | null, isInvalidated: boolean) => void;
     showHistory: boolean;
 }
 
 export const LorebookHistory: React.FC<LorebookHistoryProps> = ({
+    lang,
     historyLogs,
     invalidations,
     getActiveLineage,
     storyVersions,
     selectedItemId,
     currentStoryId,
-    onAddHistory,
+    currentVersionId,
+    onAddHistory: _onAddHistory,
+    onAddFullHistory,
     onUpdateHistory,
     onSaveHistory,
     onDeleteHistory,
+    onToggleInvalidateHistory,
     showHistory
 }) => {
     const [editingHistoryId, setEditingHistoryId] = React.useState<string | null>(null);
+    const [isAddingNew, setIsAddingNew] = React.useState<boolean>(false);
+    const [newEntryContent, setNewEntryContent] = React.useState<string>('');
 
     // Calculate Active Lineage
-    const activeStory = currentStoryId ? null : null; // Wait, parent passes currentStoryId but not the story object directly.
-    // Actually, storyVersions is passed. Let's find the current version.
-    const currentVersionId = currentStoryId ? (storyVersions.find(s => s.id === currentStoryId)?.currentVersionId || null) : null;
+    // Parent passes currentVersionId directly now.
     const activeLineage = getActiveLineage(currentVersionId, storyVersions);
 
     return (
@@ -68,8 +76,9 @@ export const LorebookHistory: React.FC<LorebookHistoryProps> = ({
                     }}
                         onClick={(e) => {
                             e.stopPropagation();
-                            const newId = onAddHistory(selectedItemId);
-                            setEditingHistoryId(newId);
+                            setIsAddingNew(true);
+                            setNewEntryContent('');
+                            setEditingHistoryId(null);
                         }}
                         onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.2)'; e.currentTarget.style.opacity = '1'; }}
                         onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = '0.8'; }}
@@ -77,6 +86,106 @@ export const LorebookHistory: React.FC<LorebookHistoryProps> = ({
                         +
                     </button>
                 </div>
+
+                {/* Local "Add New" Item */}
+                {isAddingNew && (
+                    <div style={{
+                        padding: '0.8rem',
+                        marginBottom: '0.8rem',
+                        backgroundColor: 'rgba(0,0,0,0.2)', // Matched original
+                        borderRadius: '8px',
+                        border: '1px solid rgba(148, 163, 184, 0.1)', // Matched original
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem',
+                        opacity: 1,
+                        transition: 'opacity 0.2s'
+                    }}>
+                        <textarea
+                            autoFocus
+                            value={newEntryContent}
+                            onChange={(e) => setNewEntryContent(e.target.value)}
+                            placeholder="Write history entry..."
+                            style={{
+                                width: '100%',
+                                minHeight: '80px',
+                                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                border: '1px solid #38bdf8',
+                                borderRadius: '4px',
+                                color: '#e2e8f0',
+                                padding: '0.5rem',
+                                fontSize: '0.9rem',
+                                outline: 'none',
+                                resize: 'vertical',
+                                fontFamily: 'inherit',
+                                maxWidth: '100%',
+                                boxSizing: 'border-box'
+                            }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
+                            <span>New Entry...</span>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsAddingNew(false);
+                                        setNewEntryContent('');
+                                    }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#94a3b8',
+                                        cursor: 'pointer',
+                                        padding: '0.3rem 0.6rem',
+                                        fontSize: '0.75rem',
+                                    }}
+                                >
+                                    CANCEL
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (newEntryContent.trim() !== '') {
+                                            onAddFullHistory(selectedItemId, newEntryContent);
+                                        }
+                                        setIsAddingNew(false);
+                                        setNewEntryContent('');
+                                    }}
+                                    style={{
+                                        background: 'rgba(56, 189, 248, 0.1)',
+                                        border: '1px solid #38bdf8',
+                                        color: '#38bdf8',
+                                        cursor: 'pointer',
+                                        padding: '0.3rem 0.6rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.3rem',
+                                        borderRadius: '4px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 'bold',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.1)';
+                                    }}
+                                    title="Save History"
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                        <polyline points="7 3 7 8 15 8"></polyline>
+                                    </svg>
+                                    SAVE
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {historyLogs.filter(log => {
                     // 1. Entity Match
                     if (log.entityId !== selectedItemId) return false;
@@ -90,22 +199,35 @@ export const LorebookHistory: React.FC<LorebookHistoryProps> = ({
                     return activeLineage.has(log.versionId) || log.versionId === "draft" || !log.versionId;
                 }).map(log => {
                     // Check if this specific log has been invalidated anywhere within the current active lineage
-                    const isInvalidatedInLineage = invalidations.some(inv =>
+                    // AND determine WHERE it was invalidated.
+                    const invalidatingVersionNode = invalidations.find(inv =>
                         inv.historyId === log.id &&
                         (activeLineage.has(inv.versionId) || inv.versionId === "draft")
                     );
+
+                    const isInvalidatedInLineage = !!invalidatingVersionNode;
+
+                    // NEW HIDING LOGIC (Option B):
+                    // If it was invalidated in the lineage, check IF the current looking version is EXACTLY the version where it was invalidated.
+                    // If it is NOT the exact same version (meaning we are looking at a child version), then HIDE it completely.
+                    if (isInvalidatedInLineage) {
+                        const lookTargetVersion = currentVersionId || "draft";
+                        if (invalidatingVersionNode.versionId !== lookTargetVersion) {
+                            return null; // Hide in children completely
+                        }
+                    }
 
                     return (
                         <div key={log.id} style={{
                             padding: '0.8rem',
                             marginBottom: '0.8rem',
-                            backgroundColor: isInvalidatedInLineage ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)',
+                            backgroundColor: isInvalidatedInLineage ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.2)',
                             borderRadius: '8px',
                             border: '1px solid rgba(148, 163, 184, 0.1)',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '0.5rem',
-                            opacity: isInvalidatedInLineage ? 0.6 : 1,
+                            opacity: isInvalidatedInLineage ? 0.4 : 1,
                             transition: 'opacity 0.2s'
                         }}>
                             {editingHistoryId === log.id ? (
@@ -149,89 +271,121 @@ export const LorebookHistory: React.FC<LorebookHistoryProps> = ({
                                 </div>
                             )}
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
                                 <span>{new Date(log.createdAt).toLocaleString()}</span>
-                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                {editingHistoryId === log.id && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (onSaveHistory) {
+                                                onSaveHistory();
+                                            }
+                                            setEditingHistoryId(null);
+                                        }}
+                                        style={{
+                                            background: 'rgba(56, 189, 248, 0.1)',
+                                            border: '1px solid #38bdf8',
+                                            color: '#38bdf8',
+                                            cursor: 'pointer',
+                                            padding: '0.3rem 0.6rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.3rem',
+                                            borderRadius: '4px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 'bold',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.1)';
+                                        }}
+                                        title="Save History"
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                            <polyline points="7 3 7 8 15 8"></polyline>
+                                        </svg>
+                                        SAVE
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Action Buttons (Right Aligned Bottom Corner) */}
+                            {editingHistoryId !== log.id && (
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.3rem', marginTop: '-0.2rem' }}>
+                                    {/* Toggle Invalidate / Restore Button */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onToggleInvalidateHistory(log.id, currentVersionId, isInvalidatedInLineage);
+                                        }}
+                                        style={{
+                                            background: 'transparent', border: 'none',
+                                            color: isInvalidatedInLineage ? '#10b981' : '#f59e0b', // Emerald = Restore, Amber = Invalidate
+                                            cursor: 'pointer', padding: '0.2rem 0.5rem',
+                                            display: 'flex', alignItems: 'center', gap: '0.3rem',
+                                            fontSize: '0.75rem', fontWeight: 'bold',
+                                            opacity: 0.9,
+                                            transition: 'opacity 0.2s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                                        onMouseLeave={e => e.currentTarget.style.opacity = '0.9'}
+                                        title={isInvalidatedInLineage ? (lang === 'ja' ? '復元' : 'Restore') : (lang === 'ja' ? '無効化 (このVer以降で非表示)' : 'Invalidate (Hide from this Ver onward)')}
+                                    >
+                                        {isInvalidatedInLineage ? (
+                                            <>
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="9 14 4 9 9 4"></polyline>
+                                                    <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+                                                </svg>
+                                                RESTORE
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <circle cx="12" cy="12" r="10"></circle>
+                                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                                </svg>
+                                                INVALIDATE
+                                            </>
+                                        )}
+                                    </button>
+
+                                    {/* Physical Delete Button (Original) */}
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onDeleteHistory(log.id);
                                         }}
                                         style={{
-                                            background: 'transparent',
-                                            border: 'none',
-                                            color: '#ef4444',
-                                            cursor: 'pointer',
-                                            padding: '0.3rem',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            opacity: 0.7,
-                                            transition: 'all 0.2s',
-                                            borderRadius: '4px'
+                                            background: 'transparent', border: 'none', color: '#f87171',
+                                            cursor: 'pointer', padding: '0.2rem 0.5rem',
+                                            display: 'flex', alignItems: 'center', gap: '0.3rem',
+                                            fontSize: '0.75rem', fontWeight: 'bold',
+                                            opacity: 0.8,
+                                            transition: 'opacity 0.2s'
                                         }}
-                                        onMouseEnter={e => {
-                                            e.currentTarget.style.opacity = '1';
-                                            e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-                                        }}
-                                        onMouseLeave={e => {
-                                            e.currentTarget.style.opacity = '0.7';
-                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                        }}
-                                        title="Delete Entry"
+                                        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                                        onMouseLeave={e => e.currentTarget.style.opacity = '0.8'}
+                                        title={lang === 'ja' ? '完全削除 (全バージョンから恒久的に消去)' : 'Permanent Delete (from all versions)'}
                                     >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <polyline points="3 6 5 6 21 6"></polyline>
                                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                         </svg>
+                                        DELETE
                                     </button>
-                                    {editingHistoryId === log.id && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (onSaveHistory) {
-                                                    onSaveHistory();
-                                                }
-                                                setEditingHistoryId(null);
-                                            }}
-                                            style={{
-                                                background: 'rgba(56, 189, 248, 0.1)',
-                                                border: '1px solid #38bdf8',
-                                                color: '#38bdf8',
-                                                cursor: 'pointer',
-                                                padding: '0.3rem 0.6rem',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: '0.3rem',
-                                                borderRadius: '4px',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 'bold',
-                                                transition: 'all 0.2s'
-                                            }}
-                                            onMouseEnter={e => {
-                                                e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
-                                            }}
-                                            onMouseLeave={e => {
-                                                e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.1)';
-                                            }}
-                                            title="Save History"
-                                        >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                                                <polyline points="7 3 7 8 15 8"></polyline>
-                                            </svg>
-                                            SAVE
-                                        </button>
-                                    )}
                                 </div>
-                            </div>
+                            )}
                         </div>
                     );
                 })}
             </div>
-
         </div>
     );
 };

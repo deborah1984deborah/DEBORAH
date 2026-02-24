@@ -15,16 +15,19 @@ interface LorebookDetailsProps {
     getActiveLineage: (currentVersionId: string | null, versions: any[]) => Set<string>;
     storyVersions: any[];
     currentStoryId: string | null;
-    onAddHistory: (entityId: string) => string;
+    currentVersionId: string | null;
+    onAddHistory: (entityId: string, initialContent?: string) => string;
+    onAddFullHistory: (entityId: string, historyContent: string) => void;
     onUpdateHistory: (id: string, content: string) => void;
     onSaveHistory: () => void;
     onDeleteHistory: (id: string) => void;
+    onToggleInvalidateHistory: (historyId: string, currentVersionId: string | null, isInvalidated: boolean) => void;
 }
 
 export const LorebookDetails: React.FC<LorebookDetailsProps> = ({
     lang, onClose, selectedItem,
     showHistory, setShowHistory,
-    historyLogs, invalidations, getActiveLineage, storyVersions, currentStoryId, onAddHistory, onUpdateHistory, onSaveHistory, onDeleteHistory
+    historyLogs, invalidations, getActiveLineage, storyVersions, currentStoryId, currentVersionId, onAddHistory, onAddFullHistory, onUpdateHistory, onSaveHistory, onDeleteHistory, onToggleInvalidateHistory
 }) => {
     return (
         <div style={{
@@ -214,16 +217,20 @@ export const LorebookDetails: React.FC<LorebookDetailsProps> = ({
                                 </button>
 
                                 <LorebookHistory
+                                    lang={lang}
                                     historyLogs={historyLogs}
                                     invalidations={invalidations}
                                     getActiveLineage={getActiveLineage}
                                     storyVersions={storyVersions}
                                     selectedItemId={selectedItem.id}
                                     currentStoryId={currentStoryId}
+                                    currentVersionId={currentVersionId}
                                     onAddHistory={onAddHistory}
+                                    onAddFullHistory={onAddFullHistory}
                                     onUpdateHistory={onUpdateHistory}
                                     onSaveHistory={onSaveHistory}
                                     onDeleteHistory={onDeleteHistory}
+                                    onToggleInvalidateHistory={onToggleInvalidateHistory}
                                     showHistory={showHistory}
                                 />
                             </div>

@@ -63,6 +63,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         handleSaveHistory,
         handleAddFullHistory,
         handleDeleteHistory,
+        handleToggleInvalidateHistory,
         handleNewStory,
         handleSelectStory,
         handleUndo,
@@ -76,6 +77,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         setRedoCandidates,
         handleSelectRedoBranch,
         currentStoryVersions,
+        currentVersionId,
 
         // Background History
         isBackgroundProcessing,
@@ -348,10 +350,13 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     getActiveLineage={getActiveLineage}
                     storyVersions={currentStoryVersions}
                     currentStoryId={currentStoryId}
+                    currentVersionId={currentVersionId}
                     onAddHistory={handleAddHistory} // Pass the handler
+                    onAddFullHistory={handleAddFullHistory} // Use the robust creation handler
                     onUpdateHistory={handleUpdateHistory}
                     onSaveHistory={handleSaveHistory}
                     onDeleteHistory={handleDeleteHistory}
+                    onToggleInvalidateHistory={handleToggleInvalidateHistory}
                 />
             )}
 

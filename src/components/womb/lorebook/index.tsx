@@ -21,17 +21,23 @@ export const LorebookModal: React.FC<{
     getActiveLineage: (currentVersionId: string | null, versions: any[]) => Set<string>;
     storyVersions: any[];
     currentStoryId: string | null;
-    onAddHistory: (entityId: string) => string;
+    currentVersionId: string | null;
+    onAddHistory: (entityId: string, initialContent?: string) => string;
+    onAddFullHistory: (entityId: string, historyContent: string) => void;
     onUpdateHistory: (id: string, content: string) => void;
     onSaveHistory: () => void;
     onDeleteHistory: (id: string) => void;
+    onToggleInvalidateHistory: (historyId: string, currentVersionId: string | null, isInvalidated: boolean) => void;
 }> = ({
     lang, onClose,
     mommyList, nerdList, loreList,
     activeMommyIds, setActiveMommyIds,
     activeNerdIds, setActiveNerdIds,
     activeLoreIds, setActiveLoreIds,
-    historyLogs, invalidations, getActiveLineage, storyVersions, currentStoryId, onAddHistory, onUpdateHistory, onSaveHistory, onDeleteHistory
+    historyLogs, invalidations, getActiveLineage, storyVersions, currentStoryId, currentVersionId, onAddHistory, onAddFullHistory, onUpdateHistory,
+    onSaveHistory,
+    onDeleteHistory,
+    onToggleInvalidateHistory
 }) => {
         const [activeTab, setActiveTab] = React.useState<'mommy' | 'nerd' | 'lore'>('mommy');
         const [selectedItem, setSelectedItem] = React.useState<LoreItem | null>(null);
@@ -93,10 +99,13 @@ export const LorebookModal: React.FC<{
                             getActiveLineage={getActiveLineage}
                             storyVersions={storyVersions}
                             currentStoryId={currentStoryId}
+                            currentVersionId={currentVersionId}
                             onAddHistory={onAddHistory}
+                            onAddFullHistory={onAddFullHistory}
                             onUpdateHistory={onUpdateHistory}
                             onSaveHistory={onSaveHistory}
                             onDeleteHistory={onDeleteHistory}
+                            onToggleInvalidateHistory={onToggleInvalidateHistory}
                         />
                     </div>
                 </div>

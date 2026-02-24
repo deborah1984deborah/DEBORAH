@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { StoryEntityHistory, Story } from '../../types';
+
 import { useWombSettings } from './useWombSettings';
 import { useWombLore } from './useWombLore';
 import { useWombHistory } from './useWombHistory';
@@ -39,7 +39,8 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         historyLogs, setHistoryLogs, getActiveLineage, invalidations,
         handleAddHistory: baseHandleAddHistory,
         handleUpdateHistory: baseHandleUpdateHistory,
-        handleDeleteHistory: baseHandleDeleteHistory
+        handleDeleteHistory: baseHandleDeleteHistory,
+        handleToggleInvalidateHistory
     } = history;
 
     // 4. Active CORD Background History
@@ -86,7 +87,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         const result = baseSaveGlobalStoryState(targetId, targetContent, saveType, _activeMommies, _activeNerds, _activeLores);
 
         // 2. Evaluate Background Trigger
-        if (isCordActiveModeEnabled && (saveType === 'manual' || saveType === 'generate_post')) {
+        if (isCordActiveModeEnabled && (saveType === 'manual' || saveType === 'generate_pre' || saveType === 'generate_post')) {
             const triggerCheck = evaluateBackgroundTrigger(targetId, targetContent, activeCordHistoryInterval);
             if (triggerCheck && triggerCheck.shouldTrigger && triggerCheck.baselineVersionId) {
                 processBackgroundHistory(
@@ -100,19 +101,6 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
                     baseHandleUpdateHistory,
                     baseHandleDeleteHistory
                 );
-
-                // Mark DB immediately
-                try {
-                    const currentStories = JSON.parse(localStorage.getItem('womb_stories') || '[]') as Story[];
-                    const storyIdx = currentStories.findIndex((s: Story) => s.id === targetId);
-                    if (storyIdx >= 0 && triggerCheck.targetVersionId) {
-                        const vIdx = currentStories[storyIdx].versions.findIndex((v: any) => v.id === triggerCheck.targetVersionId);
-                        if (vIdx >= 0) {
-                            currentStories[storyIdx].versions[vIdx].autoHistoryGenerated = true;
-                            localStorage.setItem('womb_stories', JSON.stringify(currentStories));
-                        }
-                    }
-                } catch (e) { console.error("Failed to mark autoHistoryGenerated flag", e) }
             }
         }
 
@@ -163,22 +151,25 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     }, [content, currentStoryId, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, setCurrentStoryId]);
 
     // Decorate handleAddHistory to automatically pass the current version id
-    const handleAddHistory = useCallback((entityId: string) => {
+    const handleAddHistory = useCallback((entityId: string, initialContent?: string) => {
         const currentActiveStory = story.savedStories.find(s => s.id === currentStoryId);
-        return baseHandleAddHistory(entityId, currentStoryId, currentActiveStory?.currentVersionId || null);
+        return baseHandleAddHistory(entityId, currentStoryId, currentActiveStory?.currentVersionId || null, initialContent);
     }, [currentStoryId, story.savedStories, baseHandleAddHistory]);
 
     // Decorate handleUpdateHistory to automatically pass the current version id
     const handleUpdateHistory = useCallback((id: string, newContent: string) => {
         const currentActiveStory = story.savedStories.find(s => s.id === currentStoryId);
+        // [WARNING: ERROR STATE]
+        // "draft" が渡されることは本来あり得ない異常系（エラー）です。
+        // もし "draft" が適用された場合、対象のヒストリーは正しいLineageから外れてしまいます。
+        // 呼び出し側のアプローチを見直し、必ず正しいVersionIDが存在する状態で呼び出すように修正してください。
         baseHandleUpdateHistory(id, newContent, currentActiveStory?.currentVersionId || "draft");
     }, [currentStoryId, story.savedStories, baseHandleUpdateHistory]);
 
     // Decorate handleDeleteHistory to automatically pass the current version id
     const handleDeleteHistory = useCallback((id: string) => {
-        const currentActiveStory = story.savedStories.find(s => s.id === currentStoryId);
-        baseHandleDeleteHistory(id, currentActiveStory?.currentVersionId || "draft");
-    }, [currentStoryId, story.savedStories, baseHandleDeleteHistory]);
+        baseHandleDeleteHistory(id);
+    }, [baseHandleDeleteHistory]);
 
     // Handle full history add (Cord integration)
     const handleAddFullHistory = useCallback((entityId: string, historyContent: string) => {
@@ -202,8 +193,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
             const resolvedVersionId = updatedStory?.currentVersionId || 'draft';
 
             // 3. Create the History Log attached to the correct resolved version using abstractions
-            const newId = baseHandleAddHistory(entityId, targetStoryId, resolvedVersionId);
-            baseHandleUpdateHistory(newId, historyContent, resolvedVersionId);
+            baseHandleAddHistory(entityId, targetStoryId, resolvedVersionId, historyContent);
         } catch (error) {
             console.error("[useWombSystem] Failed to add and save history:", error);
         }
@@ -271,6 +261,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         // History specifics passed out explicitly
         invalidations,
         getActiveLineage,
+        handleToggleInvalidateHistory,
 
         // Override the raw historyLogs with the Lineage-filtered ones
         historyLogs: activeHistoryLogs
