@@ -19,6 +19,7 @@ interface WombEditorProps {
     redoBranchCount?: number;
     showWombDebugInfo?: boolean;
     isCordProcessing?: boolean;
+    onOpenChatModal: () => void;
 }
 
 export const WombEditor: React.FC<WombEditorProps> = ({
@@ -37,7 +38,8 @@ export const WombEditor: React.FC<WombEditorProps> = ({
     canRedo,
     redoBranchCount = 0,
     showWombDebugInfo,
-    isCordProcessing
+    isCordProcessing,
+    onOpenChatModal
 }) => {
     const editorRef = useRef<any>(null); // Monaco editor instance
     const monaco = useMonaco();
@@ -506,6 +508,36 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                 gap: '0.75rem',
                 zIndex: 10
             }}>
+                <button
+                    onClick={onOpenChatModal}
+                    title={lang === 'ja' ? 'WOMB 生成履歴' : 'WOMB Interaction History'}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        padding: 0
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#38bdf8'; // Light blue text on hover
+                        e.currentTarget.style.transform = 'scale(1.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                    </svg>
+                </button>
+
                 {/* UNDO BUTTON */}
                 <button
                     onClick={onUndo}

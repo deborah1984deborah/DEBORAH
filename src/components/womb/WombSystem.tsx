@@ -14,6 +14,8 @@ import { WombEditor } from './WombEditor';
 import { WombDebugPanel } from './WombDebugPanel';
 import { CordDebugPanel } from './CordDebugPanel';
 import { BranchSelectorModal } from './BranchSelectorModal';
+import { WombChatModal } from './WombChatModal';
+
 import { useWombSystem } from '../../hooks/womb/useWombSystem';
 
 
@@ -84,6 +86,9 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         isBackgroundProcessing,
         processingTargetName
     } = useWombSystem({ lang });
+
+    // Local UI State for Modals
+    const [isWombChatModalOpen, setIsWombChatModalOpen] = useState(false);
 
     // Listen to CORD's command to add history
     React.useEffect(() => {
@@ -205,6 +210,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     redoBranchCount={redoBranchCount}
                     showWombDebugInfo={showWombDebugInfo}
                     isCordProcessing={isCordProcessing || isBackgroundProcessing}
+                    onOpenChatModal={() => setIsWombChatModalOpen(true)}
                 />
 
                 {/* CORD: Chat Interface (Right) */}
@@ -395,6 +401,14 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     onClose={() => setRedoCandidates([])}
                 />
             )}
+
+            {/* WOMB CHAT MODAL */}
+            <WombChatModal
+                isOpen={isWombChatModalOpen}
+                onClose={() => setIsWombChatModalOpen(false)}
+                storyId={currentStoryId}
+                lang={lang}
+            />
         </div>
     );
 };
