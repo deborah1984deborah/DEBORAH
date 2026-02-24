@@ -28,6 +28,9 @@ export const useCordGeneration = ({
     saveSessionsToStorage
 }: UseCordGenerationProps) => {
     const [isTyping, setIsTyping] = useState<boolean>(false);
+    const [isStreaming, setIsStreaming] = useState<boolean>(false);
+    const [streamingText, setStreamingText] = useState<string>('');
+    const [streamingThought, setStreamingThought] = useState<string>('');
 
     // Action: Generate AI Response
     const generateAiResponse = async (
@@ -51,7 +54,7 @@ export const useCordGeneration = ({
 
         setIsTyping(true);
         try {
-            const { callGeminiChat, callGemini } = await import('../../utils/gemini');
+            const { callGeminiChatStream, callGemini } = await import('../../utils/gemini');
 
             // Get latest messages for this session from state/localStorage
             const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + sessionId);
@@ -138,8 +141,43 @@ export const useCordGeneration = ({
             cordDebug.setCordDebugSystemPrompt(systemPrompt);
             cordDebug.setCordDebugInputText(JSON.stringify(currentMessages, null, 2));
 
-            // Call Chat API
-            const response = await callGeminiChat(apiKey, currentMessages as any, aiModel, systemPrompt, cordTools);
+            // Call Chat API with Streaming
+            setIsStreaming(true);
+            setStreamingText('');
+            setStreamingThought('');
+
+            let finalFunctionCall = undefined;
+            let finalRawParts: any[] = [];
+            let accumulatedText = '';
+            let accumulatedThought = '';
+
+            const stream = callGeminiChatStream(apiKey, currentMessages as any, aiModel, systemPrompt, cordTools);
+
+            for await (const chunk of stream) {
+                if (chunk.textChunk) {
+                    accumulatedText += chunk.textChunk;
+                    setStreamingText(accumulatedText);
+                }
+                if (chunk.thoughtChunk) {
+                    accumulatedThought += chunk.thoughtChunk;
+                    setStreamingThought(accumulatedThought);
+                }
+                if (chunk.functionCall) {
+                    finalFunctionCall = chunk.functionCall;
+                }
+                if (chunk.rawParts && chunk.rawParts.length > 0) {
+                    finalRawParts = chunk.rawParts;
+                }
+            }
+
+            setIsStreaming(false);
+
+            const response = {
+                text: accumulatedText || undefined,
+                thoughtSummary: accumulatedThought || undefined,
+                functionCall: finalFunctionCall,
+                rawParts: finalRawParts
+            };
 
             if (response.functionCall) {
                 // Handle Function Call
@@ -179,9 +217,23 @@ export const useCordGeneration = ({
                     const followUpMessages = [...currentMessages, funcCallMsg, funcResMsg];
 
                     try {
-                        const followUpResponse = await callGeminiChat(apiKey, followUpMessages as any, aiModel, systemPrompt, cordTools);
-                        if (followUpResponse.text) {
-                            addMessage('ai', followUpResponse.text, sessionId, undefined, followUpResponse.rawParts, followUpResponse.thoughtSummary);
+                        setIsStreaming(true);
+                        setStreamingText('');
+                        setStreamingThought('');
+                        let fuText = '';
+                        let fuThought = '';
+                        let fuRawParts: any[] = [];
+
+                        const fuStream = callGeminiChatStream(apiKey, followUpMessages as any, aiModel, systemPrompt, cordTools);
+                        for await (const chunk of fuStream) {
+                            if (chunk.textChunk) { fuText += chunk.textChunk; setStreamingText(fuText); }
+                            if (chunk.thoughtChunk) { fuThought += chunk.thoughtChunk; setStreamingThought(fuThought); }
+                            if (chunk.rawParts && chunk.rawParts.length > 0) fuRawParts = chunk.rawParts;
+                        }
+                        setIsStreaming(false);
+
+                        if (fuText || fuThought) {
+                            addMessage('ai', fuText || '', sessionId, undefined, fuRawParts, fuThought || undefined);
                         }
                     } catch (e) {
                         console.error("AI Follow up failed after function call", e);
@@ -310,18 +362,32 @@ export const useCordGeneration = ({
                     const followUpMessages = [...currentMessages, funcCallMsg, funcResMsg];
 
                     try {
-                        const followUpResponse = await callGeminiChat(apiKey, followUpMessages as any, aiModel, systemPrompt, cordTools);
-                        if (followUpResponse.text) {
-                            addMessage('ai', followUpResponse.text, sessionId, undefined, followUpResponse.rawParts, followUpResponse.thoughtSummary);
+                        setIsStreaming(true);
+                        setStreamingText('');
+                        setStreamingThought('');
+                        let fuText = '';
+                        let fuThought = '';
+                        let fuRawParts: any[] = [];
+
+                        const fuStream = callGeminiChatStream(apiKey, followUpMessages as any, aiModel, systemPrompt, cordTools);
+                        for await (const chunk of fuStream) {
+                            if (chunk.textChunk) { fuText += chunk.textChunk; setStreamingText(fuText); }
+                            if (chunk.thoughtChunk) { fuThought += chunk.thoughtChunk; setStreamingThought(fuThought); }
+                            if (chunk.rawParts && chunk.rawParts.length > 0) fuRawParts = chunk.rawParts;
+                        }
+                        setIsStreaming(false);
+
+                        if (fuText || fuThought) {
+                            addMessage('ai', fuText || '', sessionId, undefined, fuRawParts, fuThought || undefined);
                         }
                     } catch (e) {
                         console.error("AI Follow up failed after function call", e);
                         addMessage('ai', lang === 'ja' ? '処理を完了しましたが、応答でエラーが発生しました。' : 'Action completed, but failed to generate response.', sessionId);
                     }
                 }
-            } else if (response.text) {
+            } else if (response.text || response.thoughtSummary) {
                 // Add the AI message along with its raw parts and thought summary
-                addMessage('ai', response.text, sessionId, undefined, response.rawParts, response.thoughtSummary);
+                addMessage('ai', response.text || '', sessionId, undefined, response.rawParts, response.thoughtSummary);
 
                 // --- Auto Titling Logic ---
                 // Fetch fresh sessions from localStorage to avoid closure overwrite
@@ -365,6 +431,9 @@ export const useCordGeneration = ({
 
     return {
         isTyping,
+        isStreaming,
+        streamingText,
+        streamingThought,
         generateAiResponse
     };
 };

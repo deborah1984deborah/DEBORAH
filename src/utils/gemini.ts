@@ -229,6 +229,134 @@ export const callGeminiChat = async (
     }
 };
 
+export interface StreamChunk {
+    textChunk?: string;
+    thoughtChunk?: string;
+    functionCall?: { name: string, args: any };
+    rawParts?: any[];
+    isDone: boolean;
+}
+
+export const callGeminiChatStream = async function* (
+    apiKey: string,
+    messages: ChatMessageData[],
+    model: GeminiModel = 'gemini-2.5-flash',
+    systemInstruction?: string,
+    tools?: any[]
+): AsyncGenerator<StreamChunk, void, unknown> {
+    if (!apiKey) throw new Error('API Key is missing');
+
+    try {
+        const contents = messages
+            .filter(msg => msg.role !== 'system')
+            .map(msg => {
+                if (msg.role === 'function') {
+                    return {
+                        role: 'function',
+                        parts: [{ functionResponse: { name: msg.functionCall?.name, response: { result: msg.content } } }]
+                    };
+                } else if (msg.rawParts && msg.role === 'ai') {
+                    return { role: 'model', parts: msg.rawParts };
+                } else if (msg.functionCall) {
+                    return { role: 'model', parts: [{ functionCall: msg.functionCall }] };
+                } else {
+                    return { role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] };
+                }
+            });
+
+        const requestBody: any = { contents };
+
+        if (systemInstruction) {
+            requestBody.system_instruction = { parts: [{ text: systemInstruction }] };
+        }
+
+        const safetySettings = getSafetySettings();
+        if (safetySettings) requestBody.safetySettings = safetySettings;
+
+        if (tools && tools.length > 0) requestBody.tools = tools;
+
+        if (model.includes('3.')) {
+            if (!requestBody.generationConfig) requestBody.generationConfig = {};
+            requestBody.generationConfig.thinkingConfig = { includeThoughts: true };
+        }
+
+        const url = `${getGeminiUrl(model).replace(':generateContent', ':streamGenerateContent')}?alt=sse&key=${apiKey}`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorRawData = await response.text();
+            let errorData;
+            try { errorData = JSON.parse(errorRawData); } catch (e) { errorData = { error: { message: errorRawData } }; }
+            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+        }
+
+        if (!response.body) throw new Error("No response body available for streaming");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            let lines = buffer.split('\n');
+
+            // Keep the last incomplete line in the buffer
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.slice(6).trim();
+                    if (dataStr === '[DONE]') continue;
+                    if (!dataStr) continue;
+
+                    try {
+                        const data = JSON.parse(dataStr);
+                        const candidates = data.candidates?.[0];
+                        if (!candidates) continue;
+
+                        const parts = candidates.content?.parts || [];
+
+                        let textChunk = "";
+                        let thoughtChunk = "";
+                        let functionCall = undefined;
+
+                        for (const p of parts) {
+                            if (p.functionCall) functionCall = p.functionCall;
+                            else if (p.thought === true && p.text) thoughtChunk += p.text;
+                            else if (!p.thought && p.text) textChunk += p.text;
+                        }
+
+                        yield {
+                            textChunk: textChunk || undefined,
+                            thoughtChunk: thoughtChunk || undefined,
+                            functionCall,
+                            rawParts: parts,
+                            isDone: false
+                        };
+                    } catch (e) {
+                        console.error("Failed to parse SSE chunk:", line, e);
+                    }
+                }
+            }
+        }
+
+        // Final flush
+        yield { isDone: true };
+
+    } catch (error) {
+        console.error('Gemini Stream API Call Failed:', error);
+        throw error;
+    }
+};
+
 export const testGeminiConnection = async (apiKey: string): Promise<{ success: boolean; message?: string }> => {
     try {
         await callGemini(apiKey, 'Hello, just checking connection. Reply with "OK".');

@@ -49,6 +49,9 @@ export const useCordChat = (currentStoryId?: string) => {
 
         // --- Generation State & Actions ---
         isTyping: generation.isTyping,
+        isStreaming: generation.isStreaming,
+        streamingText: generation.streamingText,
+        streamingThought: generation.streamingThought,
         generateAiResponse: generation.generateAiResponse,
 
         // --- Debug State ---
