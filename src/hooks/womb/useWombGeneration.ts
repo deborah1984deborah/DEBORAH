@@ -16,6 +16,7 @@ interface UseWombGenerationProps {
     activeLoreIds: string[];
     saveGlobalStoryState: (id: string, content: string, type: 'manual' | 'generate_pre' | 'generate_post', m: string[], n: string[], l: string[]) => void;
     lastSavedContentRef: React.MutableRefObject<string>;
+    aiThinkingLevel: 'default' | 'low' | 'medium' | 'high';
     showWombDebugInfo: boolean;
     buildWombContext: () => Promise<{ systemInstruction: string, dynamicStoryContext: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>;
 }
@@ -23,7 +24,7 @@ interface UseWombGenerationProps {
 export const useWombGeneration = ({
     lang, apiKey, aiModel, content, setContent, currentStoryId, setCurrentStoryId,
     activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState,
-    lastSavedContentRef, showWombDebugInfo, buildWombContext
+    lastSavedContentRef, showWombDebugInfo, buildWombContext, aiThinkingLevel
 }: UseWombGenerationProps) => {
 
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -74,7 +75,7 @@ export const useWombGeneration = ({
             }
 
             // Call the Gemeni API
-            const generatedText = await callGemini(apiKey, payloadContent, aiModel, systemInstruction);
+            const generatedText = await callGemini(apiKey, payloadContent, aiModel, systemInstruction, aiThinkingLevel);
 
             // Append generated text
             const newContent = content + '\n' + generatedText;
@@ -99,7 +100,7 @@ export const useWombGeneration = ({
     }, [
         apiKey, aiModel, content, currentStoryId,
         activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, lang,
-        lastSavedContentRef, showWombDebugInfo, buildWombContext, setCurrentStoryId, setContent
+        lastSavedContentRef, showWombDebugInfo, buildWombContext, setCurrentStoryId, setContent, aiThinkingLevel
     ]);
 
     return {

@@ -35,6 +35,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         apiKey, setApiKey,
         tmdbAccessToken, setTmdbAccessToken,
         aiModel, setAiModel,
+        aiThinkingLevel, setAiThinkingLevel,
         isGenerating,
         currentStoryId,
         content, setContent,
@@ -289,6 +290,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 setTmdbAccessToken={setTmdbAccessToken}
                                 aiModel={aiModel}
                                 setAiModel={setAiModel}
+                                aiThinkingLevel={aiThinkingLevel}
+                                setAiThinkingLevel={setAiThinkingLevel}
                                 anchorRef={settingsBtnRef}
                             />
                         </div>

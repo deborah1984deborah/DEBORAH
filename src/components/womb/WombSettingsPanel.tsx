@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WombSafetyModal } from './WombSafetyModal';
 import { ActiveCordSettingsModal } from './ActiveCordSettingsModal';
+import { ThinkingSettingsModal } from './ThinkingSettingsModal';
 
 interface WombSettingsPanelProps {
     showSettings: boolean;
@@ -28,6 +29,8 @@ interface WombSettingsPanelProps {
     setTmdbAccessToken: (token: string) => void;
     aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
     setAiModel: (model: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') => void;
+    aiThinkingLevel: 'default' | 'low' | 'medium' | 'high';
+    setAiThinkingLevel: (level: 'default' | 'low' | 'medium' | 'high') => void;
     anchorRef: React.RefObject<HTMLButtonElement>;
 }
 
@@ -56,11 +59,14 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
     setTmdbAccessToken,
     aiModel,
     setAiModel,
+    aiThinkingLevel,
+    setAiThinkingLevel,
     anchorRef
 }) => {
     const [coords, setCoords] = useState({ top: 0, left: 0 });
     const [isFront, setIsFront] = useState(false);
     const [isSafetyModalOpen, setIsSafetyModalOpen] = useState(false);
+    const [isThinkingModalOpen, setIsThinkingModalOpen] = useState(false);
     const [isCordSettingsModalOpen, setIsCordSettingsModalOpen] = useState(false);
     const [isApiKeysOpen, setIsApiKeysOpen] = useState(false);
 
@@ -223,6 +229,24 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </div>
+                    </div>
+                    {/* Thinking Level Edit Button */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setIsThinkingModalOpen(true); }}
+                            style={{
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                color: '#fbbf24', // Amber-400
+                                padding: '0.2rem 0',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                                marginRight: '10px'
+                            }}
+                        >
+                            Thinking: {aiThinkingLevel.charAt(0).toUpperCase() + aiThinkingLevel.slice(1)}
+                        </button>
                     </div>
                 </div>
 
@@ -654,6 +678,13 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
 
             </div>
             <WombSafetyModal isOpen={isSafetyModalOpen} onClose={() => setIsSafetyModalOpen(false)} lang={lang} />
+            <ThinkingSettingsModal
+                isOpen={isThinkingModalOpen}
+                onClose={() => setIsThinkingModalOpen(false)}
+                lang={lang}
+                aiThinkingLevel={aiThinkingLevel}
+                setAiThinkingLevel={setAiThinkingLevel}
+            />
             <ActiveCordSettingsModal
                 isOpen={isCordSettingsModalOpen}
                 onClose={() => setIsCordSettingsModalOpen(false)}

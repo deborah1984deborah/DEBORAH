@@ -29,7 +29,13 @@ interface GeminiResponse {
     };
 }
 
-export const callGemini = async (apiKey: string, prompt: string, model: GeminiModel = 'gemini-2.5-flash', systemInstruction?: string): Promise<string> => {
+export const callGemini = async (
+    apiKey: string,
+    prompt: string,
+    model: GeminiModel = 'gemini-2.5-flash',
+    systemInstruction?: string,
+    aiThinkingLevel?: 'default' | 'low' | 'medium' | 'high'
+): Promise<string> => {
     if (!apiKey) {
         throw new Error('API Key is missing');
     }
@@ -52,6 +58,17 @@ export const callGemini = async (apiKey: string, prompt: string, model: GeminiMo
         const safetySettings = getSafetySettings();
         if (safetySettings) {
             requestBody.safetySettings = safetySettings;
+        }
+
+        if (model.includes('3.') && aiThinkingLevel && aiThinkingLevel !== 'default') {
+            if (!requestBody.generationConfig) {
+                requestBody.generationConfig = {};
+            }
+            requestBody.generationConfig.thinkingConfig = {
+                includeThoughts: true,
+                // Gemini API expects "LOW", "MEDIUM", or "HIGH" (or undefined)
+                thinkingLevel: aiThinkingLevel === 'high' ? 'HIGH' : aiThinkingLevel === 'medium' ? 'MEDIUM' : 'LOW'
+            };
         }
 
         const response = await fetch(`${getGeminiUrl(model)}?key=${apiKey}`, {

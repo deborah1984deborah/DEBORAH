@@ -55,6 +55,11 @@ export const useWombSettings = () => {
         return (stored as 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') || 'gemini-2.5-flash';
     });
 
+    const [aiThinkingLevel, setAiThinkingLevel] = useState<'default' | 'low' | 'medium' | 'high'>(() => {
+        const stored = localStorage.getItem('womb_ai_thinking_level');
+        return (stored as 'default' | 'low' | 'medium' | 'high') || 'default';
+    });
+
     // Load API Keys on mount (localStorage > .env)
     useEffect(() => {
         // Gemini
@@ -88,6 +93,10 @@ export const useWombSettings = () => {
     useEffect(() => {
         localStorage.setItem('womb_ai_model', aiModel);
     }, [aiModel]);
+
+    useEffect(() => {
+        localStorage.setItem('womb_ai_thinking_level', aiThinkingLevel);
+    }, [aiThinkingLevel]);
 
     useEffect(() => {
         localStorage.setItem('womb_output_length', wombOutputLength.toString());
@@ -133,6 +142,7 @@ export const useWombSettings = () => {
         showWombDebugInfo, setShowWombDebugInfo,
         apiKey, setApiKey,
         tmdbAccessToken, setTmdbAccessToken,
-        aiModel, setAiModel
+        aiModel, setAiModel,
+        aiThinkingLevel, setAiThinkingLevel
     };
 };
