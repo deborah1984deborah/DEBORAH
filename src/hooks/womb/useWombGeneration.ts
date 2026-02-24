@@ -16,7 +16,7 @@ interface UseWombGenerationProps {
     activeLoreIds: string[];
     saveGlobalStoryState: (id: string, content: string, type: 'manual' | 'generate_pre' | 'generate_post', m: string[], n: string[], l: string[]) => void;
     lastSavedContentRef: React.MutableRefObject<string>;
-    aiThinkingLevel: 'default' | 'low' | 'medium' | 'high';
+    aiThinkingLevel: 'low' | 'medium' | 'high';
     showWombDebugInfo: boolean;
     buildWombContext: () => Promise<{ systemInstruction: string, dynamicStoryContext: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>;
 }

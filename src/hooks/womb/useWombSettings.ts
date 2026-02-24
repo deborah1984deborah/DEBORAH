@@ -55,9 +55,9 @@ export const useWombSettings = () => {
         return (stored as 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') || 'gemini-2.5-flash';
     });
 
-    const [aiThinkingLevel, setAiThinkingLevel] = useState<'default' | 'low' | 'medium' | 'high'>(() => {
+    const [aiThinkingLevel, setAiThinkingLevel] = useState<'low' | 'medium' | 'high'>(() => {
         const stored = localStorage.getItem('womb_ai_thinking_level');
-        return (stored as 'default' | 'low' | 'medium' | 'high') || 'default';
+        return (stored as 'low' | 'medium' | 'high') || 'medium';
     });
 
     // Load API Keys on mount (localStorage > .env)

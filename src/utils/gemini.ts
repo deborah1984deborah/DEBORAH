@@ -34,7 +34,7 @@ export const callGemini = async (
     prompt: string,
     model: GeminiModel = 'gemini-2.5-flash',
     systemInstruction?: string,
-    aiThinkingLevel?: 'default' | 'low' | 'medium' | 'high'
+    aiThinkingLevel?: 'low' | 'medium' | 'high'
 ): Promise<string> => {
     if (!apiKey) {
         throw new Error('API Key is missing');
@@ -60,13 +60,12 @@ export const callGemini = async (
             requestBody.safetySettings = safetySettings;
         }
 
-        if (model.includes('3.') && aiThinkingLevel && aiThinkingLevel !== 'default') {
+        if (model.includes('3.') && aiThinkingLevel) {
             if (!requestBody.generationConfig) {
                 requestBody.generationConfig = {};
             }
             requestBody.generationConfig.thinkingConfig = {
                 includeThoughts: true,
-                // Gemini API expects "LOW", "MEDIUM", or "HIGH" (or undefined)
                 thinkingLevel: aiThinkingLevel === 'high' ? 'HIGH' : aiThinkingLevel === 'medium' ? 'MEDIUM' : 'LOW'
             };
         }

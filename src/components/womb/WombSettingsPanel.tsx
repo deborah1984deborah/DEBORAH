@@ -29,8 +29,8 @@ interface WombSettingsPanelProps {
     setTmdbAccessToken: (token: string) => void;
     aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
     setAiModel: (model: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') => void;
-    aiThinkingLevel: 'default' | 'low' | 'medium' | 'high';
-    setAiThinkingLevel: (level: 'default' | 'low' | 'medium' | 'high') => void;
+    aiThinkingLevel: 'low' | 'medium' | 'high';
+    setAiThinkingLevel: (level: 'low' | 'medium' | 'high') => void;
     anchorRef: React.RefObject<HTMLButtonElement>;
 }
 
