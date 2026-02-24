@@ -272,45 +272,51 @@ export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, s
                                                             fontFamily: 'monospace',
                                                             whiteSpace: 'pre-wrap'
                                                         }}>
-                                                            {msg.thoughtSummary}
-                                                            {showWombDebugInfo && msg.rawParts && msg.rawParts.length > 0 && (
-                                                                <div style={{
-                                                                    marginTop: '1rem',
-                                                                    paddingTop: '1rem',
-                                                                    borderTop: '1px dashed rgba(56, 189, 248, 0.3)'
-                                                                }}>
-                                                                    <div style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.75rem' }}>
-                                                                        [DEBUG] Mapped Raw Thought Details:
-                                                                    </div>
-                                                                    {msg.rawParts.filter(p => !!p.thoughtCall).map((part, idx) => (
-                                                                        <div key={`thoughtCall-${idx}`} style={{ marginBottom: '0.5rem', fontSize: '0.75rem' }}>
-                                                                            <span style={{ color: '#fcd34d' }}>{part.thoughtCall.name}</span>: {part.thoughtCall.args.thought}
-                                                                        </div>
-                                                                    ))}
-
-                                                                    {/* Handle Gemini 3.1 Pro direct thoughts (p.thought === true and p.text) */}
-                                                                    {msg.rawParts.filter(p => p.thought === true && typeof p.text === 'string').map((part, idx) => (
-                                                                        <div key={`thoughtText-${idx}`} style={{ marginBottom: '0.5rem', fontSize: '0.75rem' }}>
-                                                                            <span style={{ color: '#a78bfa' }}>Internal Thought</span>: {part.text.substring(0, 100)}{part.text.length > 100 ? '...' : ''}
-                                                                        </div>
-                                                                    ))}
-
-                                                                    {msg.rawParts.filter(p => !p.thoughtCall && !(p.thought === true && typeof p.text === 'string') && !(p.thought !== true && p.text)).length > 0 && (
-                                                                        <div style={{ marginTop: '0.5rem', color: '#94a3b8', fontSize: '0.7rem' }}>
-                                                                            {JSON.stringify(msg.rawParts.filter(p => !p.thoughtCall && !(p.thought === true && typeof p.text === 'string') && !(p.thought !== true && p.text)))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
                                             )}
-
-                                            {/* Generated Content */}
-                                            {msg.content}
                                         </div>
                                     )}
+
+                                    {/* Debug: Raw Thought Parts (Independent of Accordion) */}
+                                    {showWombDebugInfo && msg.rawParts && msg.rawParts.length > 0 && (
+                                        <div style={{
+                                            marginBottom: '1rem',
+                                            padding: '0.75rem',
+                                            backgroundColor: 'rgba(0,0,0,0.4)',
+                                            border: '1px solid rgba(56, 189, 248, 0.4)',
+                                            borderRadius: '6px',
+                                        }}>
+                                            <div style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.75rem' }}>
+                                                [DEBUG] Mapped Raw Thought Details:
+                                            </div>
+
+                                            {/* CORD-style thought calls */}
+                                            {msg.rawParts.filter(p => !!p.thoughtCall).map((part, idx) => (
+                                                <div key={`thoughtCall-${idx}`} style={{ marginBottom: '0.5rem', fontSize: '0.75rem' }}>
+                                                    <span style={{ color: '#fcd34d' }}>{part.thoughtCall.name}</span>: {part.thoughtCall.args.thought}
+                                                </div>
+                                            ))}
+
+                                            {/* Handle Gemini 3.1 Pro direct thoughts (p.thought === true and p.text) */}
+                                            {msg.rawParts.filter(p => p.thought === true && typeof p.text === 'string').map((part, idx) => (
+                                                <div key={`thoughtText-${idx}`} style={{ marginBottom: '0.5rem', fontSize: '0.75rem' }}>
+                                                    <span style={{ color: '#a78bfa' }}>Internal Thought</span>: {part.text.substring(0, 150)}{part.text.length > 150 ? '...' : ''}
+                                                </div>
+                                            ))}
+
+                                            {/* Fallback for other unexpected raw parts */}
+                                            {msg.rawParts.filter(p => !p.thoughtCall && !(p.thought === true && typeof p.text === 'string') && !(p.thought !== true && p.text)).length > 0 && (
+                                                <div style={{ marginTop: '0.5rem', color: '#94a3b8', fontSize: '0.7rem' }}>
+                                                    {JSON.stringify(msg.rawParts.filter(p => !p.thoughtCall && !(p.thought === true && typeof p.text === 'string') && !(p.thought !== true && p.text)))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Generated Content */}
+                                    {msg.content}
                                 </div>
                             );
                         })
