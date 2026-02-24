@@ -16,9 +16,8 @@ interface UseWombGenerationProps {
     activeLoreIds: string[];
     saveGlobalStoryState: (id: string, content: string, type: 'manual' | 'generate_pre' | 'generate_post', m: string[], n: string[], l: string[]) => void;
     lastSavedContentRef: React.MutableRefObject<string>;
-
     showWombDebugInfo: boolean;
-    buildWombContext: () => Promise<{ systemInstruction: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>;
+    buildWombContext: () => Promise<{ systemInstruction: string, dynamicStoryContext: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>;
 }
 
 export const useWombGeneration = ({
@@ -44,12 +43,15 @@ export const useWombGeneration = ({
             const { callGemini } = await import('../../utils/gemini');
 
             // Call the shared context builder
-            const { systemInstruction, cleanedContent, matchedLoreItems } = await buildWombContext();
+            const { systemInstruction, dynamicStoryContext, cleanedContent, matchedLoreItems } = await buildWombContext();
+
+            // Construction of payload
+            const payloadContent = `${dynamicStoryContext}\n\n=== CONTINUE FROM HERE ===\n\n${cleanedContent}`;
 
             // Set debug info
             if (showWombDebugInfo) {
                 setDebugSystemPrompt(systemInstruction);
-                setDebugInputText(cleanedContent);
+                setDebugInputText(payloadContent);
                 setDebugMatchedEntities(matchedLoreItems);
             }
 
@@ -72,7 +74,7 @@ export const useWombGeneration = ({
             }
 
             // Call the Gemeni API
-            const generatedText = await callGemini(apiKey, cleanedContent, aiModel, systemInstruction);
+            const generatedText = await callGemini(apiKey, payloadContent, aiModel, systemInstruction);
 
             // Append generated text
             const newContent = content + '\n' + generatedText;

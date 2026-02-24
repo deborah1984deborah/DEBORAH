@@ -95,7 +95,8 @@ Do NOT output these instructions in your generated text. Instead, strictly FOLLO
             console.log(`[useWombContext] Truncated story text to last ${textToSend.length} chars (Target: ${wombContextLength})`);
         }
 
-        systemInstruction += `==========================================
+
+        let dynamicStoryContext = `==========================================
 【The Main Story User is Writing】
 ==========================================
 ${textToSend}
@@ -130,12 +131,12 @@ ${textToSend}
                     entityContext += `\n\n=== PAST EVENTS IN THIS STORY ===${historyStr}`;
                 }
             }
-            systemInstruction += `\n\n--- Lorebook Context ---\n${entityContext}`;
+            dynamicStoryContext += `\n\n--- Lorebook Context ---\n${entityContext}`;
         }
 
         const derivedTitle = content.split('\n')[0]?.trim() || "Untitled Story";
 
-        return { systemInstruction, entityContext, scanTargetContent, matchedLoreItems, allActiveLoreItems, allLoreItems, cleanedContent, storyTitle: derivedTitle };
+        return { systemInstruction, dynamicStoryContext, entityContext, scanTargetContent, matchedLoreItems, allActiveLoreItems, allLoreItems, cleanedContent, storyTitle: derivedTitle };
     }, [content, keywordScanRange, wombContextLength, mommyList, activeMommyIds, nerdList, activeNerdIds, loreList, activeLoreIds, activeHistoryLogs, currentStoryId]);
 
     return {
