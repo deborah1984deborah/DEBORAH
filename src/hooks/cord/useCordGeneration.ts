@@ -64,26 +64,26 @@ export const useCordGeneration = ({
             const freshCurrentSessions: ChatSession[] = freshSessionsStrForCheck ? JSON.parse(freshSessionsStrForCheck) : sessions;
             const currentSession = freshCurrentSessions.find(s => s.id === sessionId);
 
-            // System prompt for CORD
             let systemPrompt = lang === 'ja'
                 ? "あなたはCORDという名のアシスタントです。ユーザーの執筆やアイデア出しをクリエイティブにサポートしてください。"
                 : "You are an assistant named CORD. Creatively support the user's writing and brainstorming.";
 
+            let wombContextString = "";
             if (currentSession?.isAwareOfWombStory && getWombContext) {
                 try {
                     const wombContext = await getWombContext();
                     if (wombContext) {
-                        systemPrompt += `\n\n[WOMB Story Context]\n`;
+                        wombContextString += `\n\n[System Info: Current WOMB Story Context]\n`;
                         if (wombContext.entityContext) {
-                            systemPrompt += `--- Matched Entities ---\n${wombContext.entityContext}\n\n`;
+                            wombContextString += `--- Matched Entities ---\n${wombContext.entityContext}\n\n`;
                         }
                         if (wombContext.allActiveLoreItems && wombContext.allActiveLoreItems.length > 0) {
                             const availableEntities = wombContext.allActiveLoreItems.map((item: any) => `- Name: ${item.name}`).join('\n');
-                            systemPrompt += `--- Currently Active Entities (In UI) ---\n${availableEntities}\n\n`;
+                            wombContextString += `--- Currently Active Entities (In UI) ---\n${availableEntities}\n\n`;
                         }
 
                         if (wombContext.cleanedContent) {
-                            systemPrompt += `--- Story Body Text ---\n${wombContext.cleanedContent}`;
+                            wombContextString += `--- Story Body Text ---\n${wombContext.cleanedContent}`;
                         }
 
                         // Set matched entities for debug panel
@@ -91,6 +91,22 @@ export const useCordGeneration = ({
                     }
                 } catch (e) {
                     console.error("Failed to load WOMB context for CORD", e);
+                }
+            }
+
+            // Assemble final array for API call
+            const apiMessages = [...currentMessages];
+            if (wombContextString && apiMessages.length > 0) {
+                // Find the last user message and append the context to it
+                for (let i = apiMessages.length - 1; i >= 0; i--) {
+                    if (apiMessages[i].role === 'user') {
+                        // Create a new object to avoid mutating the React state/localStorage array
+                        apiMessages[i] = {
+                            ...apiMessages[i],
+                            content: apiMessages[i].content + wombContextString
+                        };
+                        break;
+                    }
                 }
             }
 
@@ -139,7 +155,7 @@ export const useCordGeneration = ({
 
             // Update Debug State visually
             cordDebug.setCordDebugSystemPrompt(systemPrompt);
-            cordDebug.setCordDebugInputText(JSON.stringify(currentMessages, null, 2));
+            cordDebug.setCordDebugInputText(JSON.stringify(apiMessages, null, 2));
 
             // Call Chat API with Streaming
             setIsStreaming(true);
@@ -151,7 +167,7 @@ export const useCordGeneration = ({
             let accumulatedText = '';
             let accumulatedThought = '';
 
-            const stream = callGeminiChatStream(apiKey, currentMessages as any, aiModel, systemPrompt, cordTools);
+            const stream = callGeminiChatStream(apiKey, apiMessages as any, aiModel, systemPrompt, cordTools);
 
             for await (const chunk of stream) {
                 if (chunk.textChunk) {
@@ -214,7 +230,7 @@ export const useCordGeneration = ({
 
                     // Recurse to let AI give final string answer
                     // Combine the original messages with the new function call/response
-                    const followUpMessages = [...currentMessages, funcCallMsg, funcResMsg];
+                    const followUpMessages = [...apiMessages, funcCallMsg, funcResMsg];
 
                     try {
                         setIsStreaming(true);
@@ -359,7 +375,7 @@ export const useCordGeneration = ({
                     addMessage('ai', '', sessionId, response.functionCall, response.rawParts, response.thoughtSummary);
                     addMessage('function', uiDisplayMsg, sessionId, { name: 'add_womb_history', args: {} });
 
-                    const followUpMessages = [...currentMessages, funcCallMsg, funcResMsg];
+                    const followUpMessages = [...apiMessages, funcCallMsg, funcResMsg];
 
                     try {
                         setIsStreaming(true);
