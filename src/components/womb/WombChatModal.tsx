@@ -6,9 +6,10 @@ interface WombChatModalProps {
     onClose: () => void;
     storyId: string | null;
     lang: 'ja' | 'en';
+    showWombDebugInfo?: boolean;
 }
 
-export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, storyId, lang }) => {
+export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, storyId, lang, showWombDebugInfo }) => {
     const [interactions, setInteractions] = useState<WombChatInteraction[]>([]);
     const [expandedThoughts, setExpandedThoughts] = useState<Set<string>>(new Set());
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -272,6 +273,27 @@ export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, s
                                                             whiteSpace: 'pre-wrap'
                                                         }}>
                                                             {msg.thoughtSummary}
+                                                            {showWombDebugInfo && msg.rawParts && msg.rawParts.length > 0 && (
+                                                                <div style={{
+                                                                    marginTop: '1rem',
+                                                                    paddingTop: '1rem',
+                                                                    borderTop: '1px dashed rgba(56, 189, 248, 0.3)'
+                                                                }}>
+                                                                    <div style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.75rem' }}>
+                                                                        [DEBUG] Mapped Raw Thought Details:
+                                                                    </div>
+                                                                    {msg.rawParts.filter(p => !!p.thoughtCall).map((part, idx) => (
+                                                                        <div key={`thought-${idx}`} style={{ marginBottom: '0.5rem', fontSize: '0.75rem' }}>
+                                                                            <span style={{ color: '#fcd34d' }}>{part.thoughtCall.name}</span>: {part.thoughtCall.args.thought}
+                                                                        </div>
+                                                                    ))}
+                                                                    {msg.rawParts.filter(p => !p.thoughtCall && !p.text).length > 0 && (
+                                                                        <div style={{ marginTop: '0.5rem', color: '#94a3b8', fontSize: '0.7rem' }}>
+                                                                            {JSON.stringify(msg.rawParts.filter(p => !p.thoughtCall && !p.text))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>

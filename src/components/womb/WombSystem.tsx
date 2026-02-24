@@ -408,6 +408,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                 onClose={() => setIsWombChatModalOpen(false)}
                 storyId={currentStoryId}
                 lang={lang}
+                showWombDebugInfo={showWombDebugInfo}
             />
         </div>
     );
