@@ -22,6 +22,11 @@ export const useWombSettings = () => {
         return stored ? Number(stored) : 10000;
     });
 
+    const [wombChunkLimit, setWombChunkLimit] = useState<number>(() => {
+        const stored = localStorage.getItem('womb_chunk_limit');
+        return stored ? Number(stored) : 50;
+    });
+
     const [activeCordHistoryInterval, setActiveCordHistoryInterval] = useState<number>(() => {
         const stored = localStorage.getItem('womb_active_cord_history_interval');
         return stored ? Number(stored) : 10000;
@@ -130,11 +135,16 @@ export const useWombSettings = () => {
         localStorage.setItem('womb_debug_info', showWombDebugInfo.toString());
     }, [showWombDebugInfo]);
 
+    useEffect(() => {
+        localStorage.setItem('womb_chunk_limit', wombChunkLimit.toString());
+    }, [wombChunkLimit]);
+
     return {
         wombOutputLength, setWombOutputLength,
         cordOutputLength, setCordOutputLength,
         wombContextLength, setWombContextLength,
         keywordScanRange, setKeywordScanRange,
+        wombChunkLimit, setWombChunkLimit,
         activeCordHistoryInterval, setActiveCordHistoryInterval,
         isCordActiveModeEnabled, setIsCordActiveModeEnabled,
         showSettings, setShowSettings,

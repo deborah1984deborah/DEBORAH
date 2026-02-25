@@ -17,14 +17,15 @@ interface UseWombGenerationProps {
     saveGlobalStoryState: (id: string, content: string, type: 'manual' | 'generate_pre' | 'generate_post', m: string[], n: string[], l: string[]) => void;
     lastSavedContentRef: React.MutableRefObject<string>;
     aiThinkingLevel: 'low' | 'medium' | 'high';
+    wombChunkLimit: number;
     showWombDebugInfo: boolean;
-    buildWombContext: () => Promise<{ systemInstruction: string, dynamicStoryContext: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>;
+    buildWombContext: () => Promise<any>;
 }
 
 export const useWombGeneration = ({
     lang, apiKey, aiModel, content, setContent, currentStoryId, setCurrentStoryId,
     activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState,
-    lastSavedContentRef, showWombDebugInfo, buildWombContext, aiThinkingLevel
+    lastSavedContentRef, showWombDebugInfo, buildWombContext, aiThinkingLevel, wombChunkLimit
 }: UseWombGenerationProps) => {
 
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -83,8 +84,8 @@ export const useWombGeneration = ({
             const currentChunkInteractions = existingChat.filter(i => (i.chunkId || 0) === currentChunkId);
             const aiMessageCount = currentChunkInteractions.filter(i => i.role === 'ai').length;
 
-            if (aiMessageCount >= 10) {
-                // Auto chunk cutoff after 10 turns
+            if (aiMessageCount >= wombChunkLimit) {
+                // Auto chunk cutoff after user-defined limit turns
                 currentChunkId++;
             }
 

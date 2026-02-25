@@ -28,6 +28,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         wombOutputLength, setWombOutputLength,
         cordOutputLength, setCordOutputLength,
         wombContextLength, setWombContextLength,
+        wombChunkLimit, setWombChunkLimit,
         keywordScanRange, setKeywordScanRange,
         activeCordHistoryInterval, setActiveCordHistoryInterval,
         isCordActiveModeEnabled, setIsCordActiveModeEnabled,
@@ -411,6 +412,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                 lang={lang}
                 showWombDebugInfo={showWombDebugInfo}
                 onCutContext={handleCutContext}
+                wombChunkLimit={wombChunkLimit}
+                setWombChunkLimit={setWombChunkLimit}
             />
         </div>
     );

@@ -8,9 +8,11 @@ interface WombChatModalProps {
     lang: 'ja' | 'en';
     showWombDebugInfo?: boolean;
     onCutContext?: () => void;
+    wombChunkLimit: number;
+    setWombChunkLimit: (limit: number) => void;
 }
 
-export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, storyId, lang, showWombDebugInfo, onCutContext }) => {
+export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, storyId, lang, showWombDebugInfo, onCutContext, wombChunkLimit, setWombChunkLimit }) => {
     const [interactions, setInteractions] = useState<WombChatInteraction[]>([]);
     const [selectedChunk, setSelectedChunk] = useState<number | null>(null);
     const [expandedThoughts, setExpandedThoughts] = useState<Set<string>>(new Set());
@@ -123,6 +125,31 @@ export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, s
                     </h2>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        {/* Chunk Limit Setting */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+                            <label htmlFor="chunkLimitInput">{lang === 'ja' ? '自動切り離し:' : 'Auto Cutoff:'}</label>
+                            <input
+                                id="chunkLimitInput"
+                                type="number"
+                                min="10"
+                                max="999"
+                                value={wombChunkLimit}
+                                onChange={(e) => setWombChunkLimit(Number(e.target.value))}
+                                style={{
+                                    backgroundColor: 'rgba(0,0,0,0.3)',
+                                    border: '1px solid rgba(148,163,184,0.3)',
+                                    borderRadius: '4px',
+                                    color: '#e2e8f0',
+                                    padding: '0.2rem 0.4rem',
+                                    width: '3.5rem',
+                                    fontSize: '0.8rem',
+                                    outline: 'none',
+                                    textAlign: 'center'
+                                }}
+                            />
+                            <span>{lang === 'ja' ? '回' : 'turns'}</span>
+                        </div>
+
                         {/* Cut Context Button */}
                         {onCutContext && (
                             <button

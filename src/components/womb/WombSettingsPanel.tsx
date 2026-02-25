@@ -231,21 +231,23 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                         </div>
                     </div>
                     {/* Thinking Level Edit Button */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '4px' }}>
+                            Thinking: <span style={{ color: '#fbbf24' }}>{aiThinkingLevel.charAt(0).toUpperCase() + aiThinkingLevel.slice(1)}</span>
+                        </span>
                         <button
                             onClick={(e) => { e.stopPropagation(); setIsThinkingModalOpen(true); }}
                             style={{
-                                backgroundColor: 'transparent',
-                                border: 'none',
-                                color: '#fbbf24', // Amber-400
-                                padding: '0.2rem 0',
+                                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                                border: '1px solid rgba(56, 189, 248, 0.3)',
+                                borderRadius: '4px',
+                                color: '#38bdf8',
+                                padding: '0.2rem 0.6rem',
                                 fontSize: '0.75rem',
-                                cursor: 'pointer',
-                                textDecoration: 'underline',
-                                marginRight: '10px'
+                                cursor: 'pointer'
                             }}
                         >
-                            Thinking: {aiThinkingLevel.charAt(0).toUpperCase() + aiThinkingLevel.slice(1)}
+                            Edit
                         </button>
                     </div>
                 </div>
