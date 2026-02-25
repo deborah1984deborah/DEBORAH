@@ -117,6 +117,21 @@ export const useCordGeneration = ({
             // Define tools for CORD
             const cordTools = [{
                 functionDeclarations: [{
+                    name: "search_web",
+                    description: sessionLang === 'ja'
+                        ? "最新の情報をGoogleで検索します。事実確認が必要な場合に使用してください。"
+                        : "Searches Google for up-to-date information. Use this when you need to verify facts.",
+                    parameters: {
+                        type: "OBJECT",
+                        properties: {
+                            query: {
+                                type: "STRING",
+                                description: sessionLang === 'ja' ? "検索クエリ（例: '最新のAI ニュース'）" : "The search query."
+                            }
+                        },
+                        required: ["query"]
+                    }
+                }, {
                     name: "insert_womb_instruction",
                     description: sessionLang === 'ja'
                         ? "WOMBのエディタの現在のカーソル位置に、指定したAIインストラクションを挿入します。ユーザーの代わりに指示を書き込む際に使用します。"
@@ -163,339 +178,222 @@ export const useCordGeneration = ({
                         properties: {}
                     }
                 }]
-            }, {
-                googleSearch: {}
-            }];
+            }]; // Notice: googleSearch is deliberately omitted to prevent API 400 errors
 
             // Update Debug State visually
             cordDebug.setCordDebugSystemPrompt(systemPrompt);
             cordDebug.setCordDebugInputText(JSON.stringify(apiMessages, null, 2));
 
-            // Call Chat API with Streaming
+            // Call Chat API with Streaming, loop for multi-turn function calls
             setIsStreaming(true);
             setStreamingText('');
             setStreamingThought('');
 
-            let finalFunctionCall = undefined;
-            let finalRawParts: any[] = [];
-            let accumulatedText = '';
-            let accumulatedThought = '';
+            let currentApiMessages = [...apiMessages];
+            let loopCount = 0;
+            const MAX_LOOPS = 5;
 
-            const stream = callGeminiChatStream(apiKey, apiMessages as any, aiModel, systemPrompt, cordTools);
+            try {
+                while (loopCount < MAX_LOOPS) {
+                    loopCount++;
+                    let accumulatedText = '';
+                    let accumulatedThought = '';
+                    let finalFunctionCall: any = undefined;
+                    let finalRawParts: any[] = [];
 
-            for await (const chunk of stream) {
-                if (chunk.textChunk) {
-                    accumulatedText += chunk.textChunk;
-                    setStreamingText(accumulatedText);
-                }
-                if (chunk.thoughtChunk) {
-                    accumulatedThought += chunk.thoughtChunk;
-                    setStreamingThought(accumulatedThought);
-                }
-                if (chunk.functionCall) {
-                    finalFunctionCall = chunk.functionCall;
-                }
-                if (chunk.rawParts && chunk.rawParts.length > 0) {
-                    finalRawParts = chunk.rawParts;
-                }
-            }
-
-            setIsStreaming(false);
-
-            const response = {
-                text: accumulatedText || undefined,
-                thoughtSummary: accumulatedThought || undefined,
-                functionCall: finalFunctionCall,
-                rawParts: finalRawParts
-            };
-
-            if (response.functionCall) {
-                // Handle Function Call
-                if (response.functionCall.name === 'insert_womb_instruction') {
-                    const args = response.functionCall.args;
-                    const instructionText = args.instruction_text;
-
-                    // Dispatch custom event to WombEditor
-                    const event = new CustomEvent('womb:insert-instruction', {
-                        detail: { instructionText }
-                    });
-                    window.dispatchEvent(event);
-
-                    const functionLogMsg = sessionLang === 'ja'
-                        ? 'WOMBにインストラクションを記述しました。'
-                        : 'Inserted instruction into WOMB.';
-
-                    // Add the function call to local state so the next reply knows what happened
-                    // Create the objects directly to send to Gemini instantly
-                    const funcCallMsg: ChatMessageData = {
-                        role: 'ai',
-                        content: '',
-                        functionCall: response.functionCall,
-                        rawParts: response.rawParts
-                    };
-                    const funcResMsg: ChatMessageData = {
-                        role: 'function',
-                        content: functionLogMsg,
-                        functionCall: { name: 'insert_womb_instruction', args: {} }
-                    };
-
-                    addMessage('ai', '', sessionId, response.functionCall, response.rawParts, response.thoughtSummary);
-                    addMessage('function', functionLogMsg, sessionId, { name: 'insert_womb_instruction', args: {} }); // We map 'function' back to API in gemini.ts
-
-                    // Recurse to let AI give final string answer
-                    // Combine the original messages with the new function call/response
-                    const followUpMessages = [...apiMessages, funcCallMsg, funcResMsg];
-
-                    try {
+                    if (loopCount > 1) {
                         setIsStreaming(true);
                         setStreamingText('');
                         setStreamingThought('');
-                        let fuText = '';
-                        let fuThought = '';
-                        let fuRawParts: any[] = [];
+                    }
 
-                        const fuStream = callGeminiChatStream(apiKey, followUpMessages as any, aiModel, systemPrompt, cordTools);
-                        for await (const chunk of fuStream) {
-                            if (chunk.textChunk) { fuText += chunk.textChunk; setStreamingText(fuText); }
-                            if (chunk.thoughtChunk) { fuThought += chunk.thoughtChunk; setStreamingThought(fuThought); }
-                            if (chunk.rawParts && chunk.rawParts.length > 0) fuRawParts = chunk.rawParts;
+                    const stream = callGeminiChatStream(apiKey, currentApiMessages as any, aiModel, systemPrompt, cordTools);
+
+                    for await (const chunk of stream) {
+                        if (chunk.textChunk) {
+                            accumulatedText += chunk.textChunk;
+                            setStreamingText(accumulatedText);
                         }
+                        if (chunk.thoughtChunk) {
+                            accumulatedThought += chunk.thoughtChunk;
+                            setStreamingThought(accumulatedThought);
+                        }
+                        if (chunk.functionCall) {
+                            finalFunctionCall = chunk.functionCall;
+                        }
+                        if (chunk.rawParts && chunk.rawParts.length > 0) {
+                            finalRawParts = chunk.rawParts;
+                        }
+                    }
+
+                    if (finalFunctionCall) {
+                        // Function Call Received
+                        let functionLogMsg = '';
+                        let uiDisplayMsg = '';
+
+                        // Visually add the AI's internal decision to the chat
+                        addMessage('ai', '', sessionId, finalFunctionCall, finalRawParts, accumulatedThought || undefined);
+
+                        // Clear streaming state during background execution to prevent UI duplicate thoughts
                         setIsStreaming(false);
+                        setStreamingText('');
+                        setStreamingThought('');
 
-                        if (fuText || fuThought) {
-                            addMessage('ai', fuText || '', sessionId, undefined, fuRawParts, fuThought || undefined);
-                        }
-                    } catch (e) {
-                        console.error("AI Follow up failed after function call", e);
-                        addMessage('ai', sessionLang === 'ja' ? '処理を完了しましたが、応答でエラーが発生しました。' : 'Action completed, but failed to generate response.', sessionId);
-                    }
-                } else if (response.functionCall.name === 'add_womb_history') {
-                    const args = response.functionCall.args;
-                    const entityQuery = args.entity_query || args.entityQuery || args.entity_name || args.entityName;
-                    const explicitlyProvidedId = args.entity_id || args.entityId;
-                    const historyText = args.history_text || args.historyText || args.history;
+                        if (finalFunctionCall.name === 'search_web') {
+                            const args = finalFunctionCall.args;
+                            const query = args.query;
+                            addMessage('system', sessionLang === 'ja' ? `ウェブで「${query}」を検索しています...` : `Searching the web for "${query}"...`, sessionId);
+                            try {
+                                const { callGeminiSearch } = await import('../../utils/gemini');
+                                const searchResult = await callGeminiSearch(apiKey, query, aiModel);
+                                functionLogMsg = `[Search Results for "${query}"]\n${searchResult}`;
+                                uiDisplayMsg = sessionLang === 'ja' ? `「${query}」の検索結果を取得しました。` : `Got search results for "${query}".`;
+                            } catch (e: any) {
+                                functionLogMsg = `[Search Error] ${e.message}`;
+                                uiDisplayMsg = sessionLang === 'ja' ? `検索エラーが発生しました。` : `Search error occurred.`;
+                            }
+                        } else if (finalFunctionCall.name === 'insert_womb_instruction') {
+                            const args = finalFunctionCall.args;
+                            const instructionText = args.instruction_text;
+                            const event = new CustomEvent('womb:insert-instruction', { detail: { instructionText } });
+                            window.dispatchEvent(event);
 
-                    if (!entityQuery || !historyText) {
-                        console.error('CORD provided incomplete data for add_womb_history:', args);
-                    }
+                            functionLogMsg = sessionLang === 'ja' ? 'WOMBにインストラクションを記述しました。' : 'Inserted instruction into WOMB.';
+                            uiDisplayMsg = functionLogMsg;
+                        } else if (finalFunctionCall.name === 'add_womb_history') {
+                            const args = finalFunctionCall.args;
+                            const entityQuery = args.entity_query || args.entityQuery || args.entity_name || args.entityName;
+                            const explicitlyProvidedId = args.entity_id || args.entityId;
+                            const historyText = args.history_text || args.historyText || args.history;
 
-                    // --- HUMAN-IN-THE-LOOP RESOLUTION FLOW ---
-                    let functionLogMsg = "";
-                    let isResolved = false;
-                    let targetEntityId = explicitlyProvidedId || "";
-                    let targetEntityName = "不明なキャラクター";
-                    let storyTitle = "名称未設定のストーリー";
+                            let isResolved = false;
+                            let targetEntityId = explicitlyProvidedId || "";
+                            let targetEntityName = "不明なキャラクター";
+                            let storyTitle = "名称未設定のストーリー";
 
-                    if (getWombContext) {
-                        try {
-                            const wombContext = await getWombContext();
-                            if (wombContext.storyTitle) storyTitle = wombContext.storyTitle;
+                            if (getWombContext) {
+                                try {
+                                    const wombContext = await getWombContext();
+                                    if (wombContext.storyTitle) storyTitle = wombContext.storyTitle;
 
-                            // 1. If ID was directly provided by AI, verify it exists.
-                            if (targetEntityId && wombContext.allLoreItems) {
-                                const matchedById = wombContext.allLoreItems.find((item: any) => item.id === targetEntityId);
-                                if (matchedById) {
+                                    if (targetEntityId && wombContext.allLoreItems) {
+                                        const matchedById = wombContext.allLoreItems.find((item: any) => item.id === targetEntityId);
+                                        if (matchedById) {
+                                            isResolved = true;
+                                            targetEntityName = matchedById.name;
+                                            functionLogMsg = `[System] Success. History added to "${matchedById.name}" (ID: ${matchedById.id}).`;
+                                        }
+                                    }
+
+                                    if (!isResolved && wombContext.allLoreItems && entityQuery) {
+                                        const allItems = wombContext.allLoreItems;
+                                        const activeItems = wombContext.allActiveLoreItems || [];
+                                        const queryLower = entityQuery.toLowerCase();
+                                        const searchData = (item: any) => item.name.toLowerCase().includes(queryLower) || (item.keywords && item.keywords.some((kw: string) => kw.toLowerCase().includes(queryLower)));
+
+                                        let matches = activeItems.filter(searchData);
+                                        if (matches.length === 0) matches = allItems.filter(searchData);
+
+                                        if (matches.length === 1) {
+                                            targetEntityId = matches[0].id;
+                                            targetEntityName = matches[0].name;
+                                            isResolved = true;
+                                            functionLogMsg = `[System] Success. History added to "${matches[0].name}" (ID: ${matches[0].id}).`;
+                                        } else if (matches.length > 1) {
+                                            const candidatesStr = matches.map((m: any) => `- ID: ${m.id}, Name: ${m.name}`).join('\n');
+                                            functionLogMsg = `[System] Error: Ambiguous target. Multiple characters match the query "${entityQuery}".\nCandidates:\n${candidatesStr}\n\nPlease ask the user to clarify which ID they meant.`;
+                                        } else {
+                                            const { getLevenshteinDistance } = await import('../../utils/bison');
+                                            const scoredItems = allItems.map((item: any) => ({ item, distance: getLevenshteinDistance(queryLower, item.name.toLowerCase()) })).sort((a: any, b: any) => a.distance - b.distance);
+                                            const closestStr = scoredItems.slice(0, 3).map((s: any) => `- ID: ${s.item.id}, Name: ${s.item.name}`).join('\n');
+                                            functionLogMsg = `[System] Error: Target not found. No character perfectly matches "${entityQuery}".\nDid the user mean one of these?\nCandidates:\n${closestStr}\n\nPlease ask the user if they meant one of these characters.`;
+                                        }
+                                    }
+                                } catch (e) {
+                                    functionLogMsg = `[System] Error: Failed to query database.`;
+                                }
+                            } else {
+                                if (explicitlyProvidedId) {
+                                    targetEntityId = explicitlyProvidedId;
                                     isResolved = true;
-                                    targetEntityName = matchedById.name;
-                                    functionLogMsg = `[System] Success. History added to "${matchedById.name}" (ID: ${matchedById.id}).`;
+                                    functionLogMsg = `[System] Success. Executed with provided ID.`;
                                 }
                             }
 
-                            // 2. If not resolved, execute the 3-Step Search Flow
-                            if (!isResolved && wombContext.allLoreItems && entityQuery) {
-                                const allItems = wombContext.allLoreItems;
-                                const activeItems = wombContext.allActiveLoreItems || [];
+                            uiDisplayMsg = functionLogMsg;
+                            if (isResolved && targetEntityId) {
+                                const event = new CustomEvent('womb:add-history', { detail: { entityId: targetEntityId, historyText } });
+                                window.dispatchEvent(event);
+                                uiDisplayMsg = `${targetEntityName}(${targetEntityId})のヒストリーに追記しました(${storyTitle})`;
+                            }
+                        } else if (finalFunctionCall.name === 'trigger_auto_history') {
+                            if (triggerAutoHistory) {
+                                triggerAutoHistory();
+                                functionLogMsg = sessionLang === 'ja' ? "本文からの自動ヒストリー抽出処理を開始しました。変更があった場合はまもなく反映されます。" : "Started automatic history extraction from the text. Changes will be reflected shortly if any are found.";
+                            } else {
+                                functionLogMsg = "[System Error] triggerAutoHistory is not available.";
+                            }
+                            uiDisplayMsg = functionLogMsg;
+                        } else {
+                            // Unknown function
+                            functionLogMsg = `[System] Unknown function called: ${finalFunctionCall.name}`;
+                            uiDisplayMsg = functionLogMsg;
+                        }
 
-                                const queryLower = entityQuery.toLowerCase();
-                                const searchData = (item: any) => {
-                                    return item.name.toLowerCase().includes(queryLower) ||
-                                        (item.keywords && item.keywords.some((kw: string) => kw.toLowerCase().includes(queryLower)));
-                                };
+                        // Prepare function response and update message history for the next loop
+                        const funcCallMsg: ChatMessageData = {
+                            role: 'ai',
+                            content: '',
+                            functionCall: finalFunctionCall,
+                            rawParts: finalRawParts
+                        };
+                        const funcResMsg: ChatMessageData = {
+                            role: 'function',
+                            content: functionLogMsg,
+                            functionCall: { name: finalFunctionCall.name, args: {} }
+                        };
 
-                                // Step 1: Search Active Entities first
-                                let matches = activeItems.filter(searchData);
+                        addMessage('function', uiDisplayMsg, sessionId, { name: finalFunctionCall.name, args: {} });
+                        currentApiMessages = [...currentApiMessages, funcCallMsg as any, funcResMsg as any];
 
-                                // Step 2: If none found in Active, search all
-                                if (matches.length === 0) {
-                                    matches = allItems.filter(searchData);
-                                }
+                        // loop continues!
+                    } else if (accumulatedText || accumulatedThought) {
+                        // AI finished with text
+                        addMessage('ai', accumulatedText || '', sessionId, undefined, finalRawParts, accumulatedThought || undefined);
 
-                                if (matches.length === 1) {
-                                    // Step X-C: Exactly 1 found
-                                    targetEntityId = matches[0].id;
-                                    targetEntityName = matches[0].name;
-                                    isResolved = true;
-                                    functionLogMsg = `[System] Success. History added to "${matches[0].name}" (ID: ${matches[0].id}).`;
-                                } else if (matches.length > 1) {
-                                    // Step X-B: Multiple matches
-                                    const candidatesStr = matches.map((m: any) => `- ID: ${m.id}, Name: ${m.name}`).join('\n');
-                                    functionLogMsg = `[System] Error: Ambiguous target. Multiple characters match the query "${entityQuery}".\nCandidates:\n${candidatesStr}\n\nPlease ask the user to clarify which ID they meant.`;
-                                } else {
-                                    // Step 3-A: None found, do fallback approximate matching
-                                    const { getLevenshteinDistance } = await import('../../utils/bison');
+                        // Clear streaming state immediately before any background processing
+                        setIsStreaming(false);
+                        setStreamingText('');
+                        setStreamingThought('');
 
-                                    const scoredItems = allItems.map((item: any) => ({
-                                        item,
-                                        distance: getLevenshteinDistance(queryLower, item.name.toLowerCase())
-                                    })).sort((a: any, b: any) => a.distance - b.distance);
+                        // --- Auto Titling Logic ---
+                        if (currentMessages.length === 1 && currentMessages[0].role === 'user') {
+                            const freshSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
+                            const freshSessions: ChatSession[] = freshSessionsStr ? JSON.parse(freshSessionsStr) : sessions;
+                            const sessionToUpdate = freshSessions.find(s => s.id === sessionId);
+                            if (sessionToUpdate && sessionToUpdate.title === 'New Chat') {
+                                try {
+                                    const titlePrompt = sessionLang === 'ja'
+                                        ? `次のユーザーの入力を元に、このチャットのタイトルを20文字以内で作成してください。\n※「(〇〇文字)」のような文字数のカウントやカッコなどの補足情報は一切含めず、純粋なタイトル文字列のみを出力してください。\n\nユーザー入力: "${currentMessages[0].content}"`
+                                        : `Create a title for this chat based on the following user input. Keep it under 20 characters.\n* Output ONLY the pure title string without quotes, parentheses, or character counts.\n\nUser input: "${currentMessages[0].content}"`;
 
-                                    // Take top 3 closest
-                                    const closestStr = scoredItems.slice(0, 3).map((s: any) => `- ID: ${s.item.id}, Name: ${s.item.name}`).join('\n');
+                                    const generatedTitle = await callGemini(apiKey, titlePrompt, 'gemini-2.5-flash');
+                                    const cleanTitle = generatedTitle.replace(/["']/g, '').trim();
 
-                                    functionLogMsg = `[System] Error: Target not found. No character perfectly matches "${entityQuery}".\nDid the user mean one of these?\nCandidates:\n${closestStr}\n\nPlease ask the user if they meant one of these characters.`;
+                                    const updatedSessions = freshSessions.map(s => s.id === sessionId ? { ...s, title: cleanTitle } : s);
+                                    saveSessionsToStorage(updatedSessions);
+                                } catch (titleError) {
+                                    console.error("Failed to generate title:", titleError);
                                 }
                             }
-                        } catch (e) {
-                            console.error("[CORD Tool] Failed to execute 3-step entity resolution", e);
-                            functionLogMsg = `[System] Error: Failed to query database.`;
                         }
+                        break; // Exit the loop successfully
                     } else {
-                        // Fallback if context is entirely broken
-                        if (explicitlyProvidedId) {
-                            targetEntityId = explicitlyProvidedId;
-                            isResolved = true;
-                            functionLogMsg = `[System] Success. Executed with provided ID.`;
-                        }
-                    }
-
-                    let uiDisplayMsg = functionLogMsg; // Fallback for errors
-
-                    if (isResolved && targetEntityId) {
-                        // Dispatch only if fully resolved
-                        const event = new CustomEvent('womb:add-history', {
-                            detail: { entityId: targetEntityId, historyText }
-                        });
-                        console.log(`[CORD Tool] Dispatching 'womb:add-history' event for real...`, { entityId: targetEntityId, historyText });
-                        window.dispatchEvent(event);
-
-                        // Set the formatted message requested by the user
-                        uiDisplayMsg = `${targetEntityName}(${targetEntityId})のヒストリーに追記しました(${storyTitle})`;
-                    } else {
-                        console.log(`[CORD Tool] womb:add-history resolution failed or ambiguous. Asking AI to confirm with user.`);
-                    }
-
-                    const funcCallMsg: ChatMessageData = {
-                        role: 'ai',
-                        content: '',
-                        functionCall: response.functionCall,
-                        rawParts: response.rawParts
-                    };
-                    const funcResMsg: ChatMessageData = {
-                        role: 'function',
-                        content: functionLogMsg,
-                        functionCall: { name: 'add_womb_history', args: {} }
-                    };
-
-                    addMessage('ai', '', sessionId, response.functionCall, response.rawParts, response.thoughtSummary);
-                    addMessage('function', uiDisplayMsg, sessionId, { name: 'add_womb_history', args: {} });
-
-                    const followUpMessages = [...apiMessages, funcCallMsg, funcResMsg];
-
-                    try {
-                        setIsStreaming(true);
-                        setStreamingText('');
-                        setStreamingThought('');
-                        let fuText = '';
-                        let fuThought = '';
-                        let fuRawParts: any[] = [];
-
-                        const fuStream = callGeminiChatStream(apiKey, followUpMessages as any, aiModel, systemPrompt, cordTools);
-                        for await (const chunk of fuStream) {
-                            if (chunk.textChunk) { fuText += chunk.textChunk; setStreamingText(fuText); }
-                            if (chunk.thoughtChunk) { fuThought += chunk.thoughtChunk; setStreamingThought(fuThought); }
-                            if (chunk.rawParts && chunk.rawParts.length > 0) fuRawParts = chunk.rawParts;
-                        }
-                        setIsStreaming(false);
-
-                        if (fuText || fuThought) {
-                            addMessage('ai', fuText || '', sessionId, undefined, fuRawParts, fuThought || undefined);
-                        }
-                    } catch (e) {
-                        console.error("AI Follow up failed after function call", e);
-                        addMessage('ai', sessionLang === 'ja' ? '処理を完了しましたが、応答でエラーが発生しました。' : 'Action completed, but failed to generate response.', sessionId);
-                    }
-                } else if (response.functionCall.name === 'trigger_auto_history') {
-                    let functionLogMsg = "";
-                    if (triggerAutoHistory) {
-                        triggerAutoHistory();
-                        functionLogMsg = sessionLang === 'ja'
-                            ? "本文からの自動ヒストリー抽出処理を開始しました。変更があった場合はまもなく反映されます。"
-                            : "Started automatic history extraction from the text. Changes will be reflected shortly if any are found.";
-                    } else {
-                        functionLogMsg = "[System Error] triggerAutoHistory is not available.";
-                    }
-
-                    const funcCallMsg: ChatMessageData = {
-                        role: 'ai',
-                        content: '',
-                        functionCall: response.functionCall,
-                        rawParts: response.rawParts
-                    };
-                    const funcResMsg: ChatMessageData = {
-                        role: 'function',
-                        content: functionLogMsg,
-                        functionCall: { name: 'trigger_auto_history', args: {} }
-                    };
-
-                    addMessage('ai', '', sessionId, response.functionCall, response.rawParts, response.thoughtSummary);
-                    addMessage('function', functionLogMsg, sessionId, { name: 'trigger_auto_history', args: {} });
-
-                    const followUpMessages = [...apiMessages, funcCallMsg, funcResMsg];
-
-                    try {
-                        setIsStreaming(true);
-                        setStreamingText('');
-                        setStreamingThought('');
-                        let fuText = '';
-                        let fuThought = '';
-                        let fuRawParts: any[] = [];
-
-                        const fuStream = callGeminiChatStream(apiKey, followUpMessages as any, aiModel, systemPrompt, cordTools);
-                        for await (const chunk of fuStream) {
-                            if (chunk.textChunk) { fuText += chunk.textChunk; setStreamingText(fuText); }
-                            if (chunk.thoughtChunk) { fuThought += chunk.thoughtChunk; setStreamingThought(fuThought); }
-                            if (chunk.rawParts && chunk.rawParts.length > 0) fuRawParts = chunk.rawParts;
-                        }
-                        setIsStreaming(false);
-
-                        if (fuText || fuThought) {
-                            addMessage('ai', fuText || '', sessionId, undefined, fuRawParts, fuThought || undefined);
-                        }
-                    } catch (e) {
-                        console.error("AI Follow up failed after function call", e);
-                        addMessage('ai', sessionLang === 'ja' ? '処理を完了しましたが、応答でエラーが発生しました。' : 'Action completed, but failed to generate response.', sessionId);
+                        break; // Edge case, exit to prevent infinite loop
                     }
                 }
-            } else if (response.text || response.thoughtSummary) {
-                // Add the AI message along with its raw parts and thought summary
-                addMessage('ai', response.text || '', sessionId, undefined, response.rawParts, response.thoughtSummary);
-
-                // --- Auto Titling Logic ---
-                // Fetch fresh sessions from localStorage to avoid closure overwrite
-                const freshSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
-                const freshSessions: ChatSession[] = freshSessionsStr ? JSON.parse(freshSessionsStr) : sessions;
-
-                if (currentMessages.length === 1 && currentMessages[0].role === 'user') {
-                    const sessionToUpdate = freshSessions.find(s => s.id === sessionId);
-                    if (sessionToUpdate && sessionToUpdate.title === 'New Chat') {
-                        try {
-                            // Prompt AI to generate a title
-                            const titlePrompt = sessionLang === 'ja'
-                                ? `次のユーザーの入力を元に、このチャットのタイトルを20文字以内で作成してください。\n※「(〇〇文字)」のような文字数のカウントやカッコなどの補足情報は一切含めず、純粋なタイトル文字列のみを出力してください。\n\nユーザー入力: "${currentMessages[0].content}"`
-                                : `Create a title for this chat based on the following user input. Keep it under 20 characters.\n* Output ONLY the pure title string without quotes, parentheses, or character counts.\n\nUser input: "${currentMessages[0].content}"`;
-
-                            const generatedTitle = await callGemini(apiKey, titlePrompt, 'gemini-2.5-flash');
-                            const cleanTitle = generatedTitle.replace(/["']/g, '').trim();
-
-                            const updatedSessions = freshSessions.map(s =>
-                                s.id === sessionId ? { ...s, title: cleanTitle } : s
-                            );
-                            saveSessionsToStorage(updatedSessions);
-                        } catch (titleError) {
-                            console.error("Failed to generate title:", titleError);
-                        }
-                    }
-                }
+            } finally {
+                setIsStreaming(false);
             }
 
         } catch (error: any) {

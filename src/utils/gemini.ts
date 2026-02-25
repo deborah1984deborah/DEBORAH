@@ -159,9 +159,10 @@ export const callGeminiChat = async (
             .filter(msg => msg.role !== 'system') // Filter out our internal 'system' UI messages
             .map(msg => {
                 if (msg.role === 'function') {
-                    // When responding with a function result
+                    // When responding with a function result, the role MUST be "user" 
+                    // for the Gemini REST API, otherwise it hallucinates and breaks the loop.
                     return {
-                        role: 'function',
+                        role: 'user',
                         parts: [{
                             functionResponse: {
                                 name: msg.functionCall?.name,
@@ -170,11 +171,12 @@ export const callGeminiChat = async (
                         }]
                     };
                 } else if (msg.rawParts && msg.role === 'ai') {
-                    // When the AI made ANY response, we MUST pass back the exact parts
-                    // it generated, which includes any `thought` text, `thought_signature` or `functionCall`.
+                    // Filter out thoughts from history. Feeding thoughts back to the model 
+                    // causes it to repeat its past thoughts and lose track of the conversation.
+                    const filteredParts = msg.rawParts.filter(p => !p.thought && !p.thought_signature && !p.thoughtSignature);
                     return {
                         role: 'model',
-                        parts: msg.rawParts
+                        parts: filteredParts.length > 0 ? filteredParts : [{ text: '' }]
                     };
                 } else if (msg.functionCall) {
                     // Fallback for older stored messages that lack rawParts but had a function call
@@ -298,12 +300,14 @@ export const callGeminiChatStream = async function* (
             .filter(msg => msg.role !== 'system')
             .map(msg => {
                 if (msg.role === 'function') {
+                    // Function results must be sent from the "user" role to keep Gemini from hallucinating
                     return {
-                        role: 'function',
+                        role: 'user',
                         parts: [{ functionResponse: { name: msg.functionCall?.name, response: { result: msg.content } } }]
                     };
                 } else if (msg.rawParts && msg.role === 'ai') {
-                    return { role: 'model', parts: msg.rawParts };
+                    const filteredParts = msg.rawParts.filter(p => !p.thought && !p.thought_signature && !p.thoughtSignature);
+                    return { role: 'model', parts: filteredParts.length > 0 ? filteredParts : [{ text: '' }] };
                 } else if (msg.functionCall) {
                     return { role: 'model', parts: [{ functionCall: msg.functionCall }] };
                 } else {
@@ -419,4 +423,69 @@ export const verifyCelebrity = async (apiKey: string, name: string): Promise<boo
     const response = await callGemini(apiKey, prompt);
     const cleanResponse = response.trim().toUpperCase();
     return cleanResponse.includes('YES');
+};
+
+/**
+ * Specifically calls the Gemini API to perform a Google Search.
+ * This is used as a workaround to allow CORD to search the web without failing
+ * the API restriction that prevents combining `googleSearch` and `functionDeclarations`.
+ * 
+ * @param apiKey The user's Gemini API key
+ * @param query The search query string
+ * @param model The model to use for the search (should match the main chat model)
+ * @returns The text result of the search based on Google Grounding
+ */
+export const callGeminiSearch = async (
+    apiKey: string,
+    query: string,
+    model: GeminiModel = 'gemini-2.5-flash'
+): Promise<string> => {
+    if (!apiKey) {
+        throw new Error('API Key is missing for background search');
+    }
+
+    try {
+        const systemInstruction = `You are a search query executor. Your only job is to search the web for the user's query and summarize the findings concisely and factually. Do not use conversational filler.`;
+
+        const requestBody: any = {
+            contents: [{
+                parts: [{ text: `Search for: ${query}` }]
+            }],
+            system_instruction: {
+                parts: [{ text: systemInstruction }]
+            },
+            tools: [{ googleSearch: {} }]
+        };
+
+        const safetySettings = getSafetySettings();
+        if (safetySettings) {
+            requestBody.safetySettings = safetySettings;
+        }
+
+        const response = await fetch(`${getGeminiUrl(model)}?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorRawData = await response.text();
+            let errorData;
+            try { errorData = JSON.parse(errorRawData); } catch (e) { errorData = { error: { message: errorRawData } }; }
+            throw new Error(errorData.error?.message || `Search API Error: ${response.status}`);
+        }
+
+        const data: GeminiResponse = await response.json();
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        const textPart = parts.find(p => !p.thought && p.text);
+
+        if (!textPart || !textPart.text) {
+            return "(検索を実行しましたが、結果が取得できませんでした。)";
+        }
+
+        return textPart.text;
+    } catch (error) {
+        console.error('Gemini Search API Call Failed:', error);
+        throw error;
+    }
 };

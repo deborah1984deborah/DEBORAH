@@ -277,8 +277,8 @@ export const CordChat: React.FC<CordChatProps> = ({
                         </div>
                     )}
                     {messages.map((msg) => {
-                        // Skip rendering empty messages that are purely function calls
-                        if (msg.role === 'ai' && !msg.content && msg.functionCall) {
+                        // Skip rendering empty messages that are purely function calls (no text AND no thought)
+                        if (msg.role === 'ai' && !msg.content && !msg.thoughtSummary && msg.functionCall) {
                             return null;
                         }
 
