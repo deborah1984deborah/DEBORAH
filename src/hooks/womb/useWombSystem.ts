@@ -126,7 +126,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         saveGlobalStoryState, lastSavedContentRef, // pass UNWRAPPED to generation hook so it can manage its own lifecycle pre/post 
         showWombDebugInfo, buildWombContext
     });
-    const { isGenerating, handleSave, debugSystemPrompt, debugInputText, debugMatchedEntities } = generation;
+    const { isGenerating, handleSave, handleCutContext, debugSystemPrompt, debugInputText, debugMatchedEntities } = generation;
 
     // --- Complex Composition Handlers ---
 
@@ -244,6 +244,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         // Wrapped Handlers
         isGenerating,
         handleSave,
+        handleCutContext,
         handleManualSave,
         handleAddHistory,
         handleUpdateHistory,

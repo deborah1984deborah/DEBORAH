@@ -122,4 +122,5 @@ export interface WombChatInteraction {
     rawParts?: any[];
     thoughtSummary?: string;
     createdAt: number;
+    chunkId?: number; // Used to separate context windows (0-indexed)
 }

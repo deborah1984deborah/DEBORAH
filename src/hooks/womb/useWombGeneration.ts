@@ -79,13 +79,24 @@ export const useWombGeneration = ({
             const existingChatJson = localStorage.getItem(storageKey);
             const existingChat: WombChatInteraction[] = existingChatJson ? JSON.parse(existingChatJson) : [];
 
-            // Map existing interactions to ChatMessageData format
-            const messages: any[] = existingChat.map(interaction => ({
-                role: interaction.role,
-                content: interaction.content || '',
-                rawParts: interaction.rawParts,
-                thoughtSummary: interaction.thoughtSummary
-            }));
+            let currentChunkId = existingChat.length > 0 ? (existingChat[existingChat.length - 1].chunkId || 0) : 0;
+            const currentChunkInteractions = existingChat.filter(i => (i.chunkId || 0) === currentChunkId);
+            const aiMessageCount = currentChunkInteractions.filter(i => i.role === 'ai').length;
+
+            if (aiMessageCount >= 10) {
+                // Auto chunk cutoff after 10 turns
+                currentChunkId++;
+            }
+
+            // Map existing interactions in the CURRENT chunk to ChatMessageData format
+            const messages: any[] = existingChat
+                .filter(i => (i.chunkId || 0) === currentChunkId && i.content !== '-- Context manually cleared --')
+                .map(interaction => ({
+                    role: interaction.role,
+                    content: interaction.content || '',
+                    rawParts: interaction.rawParts,
+                    thoughtSummary: interaction.thoughtSummary
+                }));
 
             // Append current user message
             messages.push({
@@ -105,7 +116,7 @@ export const useWombGeneration = ({
 
             if (!generatedText) throw new Error("No text generated");
 
-            // Log the generation interactions
+            // Log the generation interactions with current chunkId
             const now = Date.now();
             const newInteractions: WombChatInteraction[] = [
                 {
@@ -113,14 +124,16 @@ export const useWombGeneration = ({
                     storyId: newId,
                     role: 'system',
                     content: systemInstruction,
-                    createdAt: now
+                    createdAt: now,
+                    chunkId: currentChunkId
                 },
                 {
                     id: `interaction_${now}_usr`,
                     storyId: newId,
                     role: 'user',
                     content: payloadContent,
-                    createdAt: now + 1
+                    createdAt: now + 1,
+                    chunkId: currentChunkId
                 },
                 {
                     id: `interaction_${now}_ai`,
@@ -129,7 +142,8 @@ export const useWombGeneration = ({
                     content: generatedText,
                     rawParts,
                     thoughtSummary,
-                    createdAt: now + 2
+                    createdAt: now + 2,
+                    chunkId: currentChunkId
                 }
             ];
 
@@ -166,11 +180,38 @@ export const useWombGeneration = ({
         lastSavedContentRef, showWombDebugInfo, buildWombContext, setCurrentStoryId, setContent, aiThinkingLevel
     ]);
 
+    const handleCutContext = useCallback(() => {
+        if (!currentStoryId) return;
+        const storageKey = `womb_chat_${currentStoryId}`;
+        const existingChatJson = localStorage.getItem(storageKey);
+        const existingChat: WombChatInteraction[] = existingChatJson ? JSON.parse(existingChatJson) : [];
+        if (existingChat.length === 0) return; // Nothing to cut
+
+        const currentChunkId = existingChat[existingChat.length - 1].chunkId || 0;
+
+        const cutInteraction: WombChatInteraction = {
+            id: `interaction_${Date.now()}_cut`,
+            storyId: currentStoryId,
+            role: 'system',
+            content: '-- Context manually cleared --',
+            createdAt: Date.now(),
+            chunkId: currentChunkId + 1 // Forces next save to use this chunk
+        };
+
+        try {
+            localStorage.setItem(storageKey, JSON.stringify([...existingChat, cutInteraction]));
+            alert(lang === 'ja' ? 'WOMBの履歴コンテキストを切り離しました（次回生成は新規チャットになります）' : 'Context severed. Next generation will start a new chunk.');
+        } catch (e) {
+            console.error("Failed to save cut interaction", e);
+        }
+    }, [currentStoryId, lang]);
+
     return {
         isGenerating,
         debugSystemPrompt,
         debugInputText,
         debugMatchedEntities,
-        handleSave
+        handleSave,
+        handleCutContext
     };
 };
