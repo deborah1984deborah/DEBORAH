@@ -246,8 +246,12 @@ export const useCordGeneration = ({
                             try {
                                 const { callGeminiSearch } = await import('../../utils/gemini');
                                 const searchResult = await callGeminiSearch(apiKey, query, aiModel);
+
+                                // Show the short completion notification first
+                                addMessage('system', sessionLang === 'ja' ? `「${query}」の検索結果を取得しました。` : `Got search results for "${query}".`, sessionId);
+
                                 functionLogMsg = `[Search Results for "${query}"]\n${searchResult}`;
-                                uiDisplayMsg = sessionLang === 'ja' ? `「${query}」の検索結果を取得しました。` : `Got search results for "${query}".`;
+                                uiDisplayMsg = `🔍 **Google Search Results (${query})**\n\n${searchResult}`;
                             } catch (e: any) {
                                 functionLogMsg = `[Search Error] ${e.message}`;
                                 uiDisplayMsg = sessionLang === 'ja' ? `検索エラーが発生しました。` : `Search error occurred.`;
