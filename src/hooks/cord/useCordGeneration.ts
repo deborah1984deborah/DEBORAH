@@ -15,6 +15,7 @@ interface UseCordGenerationProps {
     STORAGE_KEY_SESSIONS: string;
     STORAGE_KEY_MESSAGES_PREFIX: string;
     saveSessionsToStorage: (updatedSessions: ChatSession[]) => void;
+    triggerAutoHistory?: () => void;
 }
 
 export const useCordGeneration = ({
@@ -25,7 +26,8 @@ export const useCordGeneration = ({
     cordDebug,
     STORAGE_KEY_SESSIONS,
     STORAGE_KEY_MESSAGES_PREFIX,
-    saveSessionsToStorage
+    saveSessionsToStorage,
+    triggerAutoHistory
 }: UseCordGenerationProps) => {
     const [isTyping, setIsTyping] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
@@ -150,6 +152,15 @@ export const useCordGeneration = ({
                                 description: sessionLang === 'ja' ? "Historyに追記する情報。" : "The information to append to the History."
                             }
                         },
+                    }
+                }, {
+                    name: "trigger_auto_history",
+                    description: sessionLang === 'ja'
+                        ? "ユーザーから「今の本文からヒストリーを抽出して」「最新の流れを更新して」のように自動抽出を依頼された場合に使用します。内部で本文の差分解析プロセスを強制起動し、対象キャラクターのHistoryを自動更新させます。"
+                        : "Use this when the user requests to automatically extract or record history from the current text. It manually triggers the background diff-analysis process to update character histories.",
+                    parameters: {
+                        type: "OBJECT",
+                        properties: {}
                     }
                 }]
             }, {
@@ -377,6 +388,57 @@ export const useCordGeneration = ({
 
                     addMessage('ai', '', sessionId, response.functionCall, response.rawParts, response.thoughtSummary);
                     addMessage('function', uiDisplayMsg, sessionId, { name: 'add_womb_history', args: {} });
+
+                    const followUpMessages = [...apiMessages, funcCallMsg, funcResMsg];
+
+                    try {
+                        setIsStreaming(true);
+                        setStreamingText('');
+                        setStreamingThought('');
+                        let fuText = '';
+                        let fuThought = '';
+                        let fuRawParts: any[] = [];
+
+                        const fuStream = callGeminiChatStream(apiKey, followUpMessages as any, aiModel, systemPrompt, cordTools);
+                        for await (const chunk of fuStream) {
+                            if (chunk.textChunk) { fuText += chunk.textChunk; setStreamingText(fuText); }
+                            if (chunk.thoughtChunk) { fuThought += chunk.thoughtChunk; setStreamingThought(fuThought); }
+                            if (chunk.rawParts && chunk.rawParts.length > 0) fuRawParts = chunk.rawParts;
+                        }
+                        setIsStreaming(false);
+
+                        if (fuText || fuThought) {
+                            addMessage('ai', fuText || '', sessionId, undefined, fuRawParts, fuThought || undefined);
+                        }
+                    } catch (e) {
+                        console.error("AI Follow up failed after function call", e);
+                        addMessage('ai', sessionLang === 'ja' ? '処理を完了しましたが、応答でエラーが発生しました。' : 'Action completed, but failed to generate response.', sessionId);
+                    }
+                } else if (response.functionCall.name === 'trigger_auto_history') {
+                    let functionLogMsg = "";
+                    if (triggerAutoHistory) {
+                        triggerAutoHistory();
+                        functionLogMsg = sessionLang === 'ja'
+                            ? "本文からの自動ヒストリー抽出処理を開始しました。変更があった場合はまもなく反映されます。"
+                            : "Started automatic history extraction from the text. Changes will be reflected shortly if any are found.";
+                    } else {
+                        functionLogMsg = "[System Error] triggerAutoHistory is not available.";
+                    }
+
+                    const funcCallMsg: ChatMessageData = {
+                        role: 'ai',
+                        content: '',
+                        functionCall: response.functionCall,
+                        rawParts: response.rawParts
+                    };
+                    const funcResMsg: ChatMessageData = {
+                        role: 'function',
+                        content: functionLogMsg,
+                        functionCall: { name: 'trigger_auto_history', args: {} }
+                    };
+
+                    addMessage('ai', '', sessionId, response.functionCall, response.rawParts, response.thoughtSummary);
+                    addMessage('function', functionLogMsg, sessionId, { name: 'trigger_auto_history', args: {} });
 
                     const followUpMessages = [...apiMessages, funcCallMsg, funcResMsg];
 

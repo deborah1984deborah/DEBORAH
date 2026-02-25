@@ -86,7 +86,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
 
         // Background History
         isBackgroundProcessing,
-        processingTargetName
+        processingTargetName,
+        triggerAutoHistory
     } = useWombSystem({ lang });
 
     // Local UI State for Modals
@@ -326,6 +327,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                             // Background auto-history integration
                             isBackgroundProcessing={isBackgroundProcessing}
                             processingTargetName={processingTargetName}
+                            triggerAutoHistory={triggerAutoHistory}
                         />
                     </div>
                 </div>

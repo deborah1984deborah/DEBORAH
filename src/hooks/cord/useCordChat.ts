@@ -2,7 +2,7 @@ import { useCordSession } from './useCordSession';
 import { useCordGeneration } from './useCordGeneration';
 import { useCordDebug } from './useCordDebug';
 
-export const useCordChat = (currentStoryId?: string, lang: 'ja' | 'en' = 'ja') => {
+export const useCordChat = (currentStoryId?: string, lang: 'ja' | 'en' = 'ja', triggerAutoHistory?: () => void) => {
     // 1. Session & Storage Management
     const session = useCordSession(currentStoryId, lang);
 
@@ -22,7 +22,8 @@ export const useCordChat = (currentStoryId?: string, lang: 'ja' | 'en' = 'ja') =
         },
         STORAGE_KEY_SESSIONS: session.STORAGE_KEY_SESSIONS,
         STORAGE_KEY_MESSAGES_PREFIX: session.STORAGE_KEY_MESSAGES_PREFIX,
-        saveSessionsToStorage: session.saveSessionsToStorage
+        saveSessionsToStorage: session.saveSessionsToStorage,
+        triggerAutoHistory
     });
 
     return {

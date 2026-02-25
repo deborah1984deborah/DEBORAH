@@ -226,6 +226,39 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         }
     }, [currentStoryId, content, historyLogs, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, setCurrentStoryId, setHistoryLogs]);
 
+    const triggerAutoHistory = useCallback(() => {
+        let targetStoryId = currentStoryId;
+        if (!targetStoryId) {
+            targetStoryId = Date.now().toString();
+            setCurrentStoryId(targetStoryId);
+        }
+
+        // 1. Force a save so evaluateBackgroundTrigger has the latest state in localStorage
+        saveGlobalStoryState(
+            targetStoryId, content, 'manual',
+            activeMommyIds, activeNerdIds, activeLoreIds
+        );
+
+        // 2. Evaluate with a threshold of 0 to guarantee it runs
+        const triggerCheck = evaluateBackgroundTrigger(targetStoryId, content, 0);
+
+        // 3. Kick off the heavy background background job using the same pipeline
+        if (triggerCheck && triggerCheck.shouldTrigger && triggerCheck.baselineVersionId) {
+            processBackgroundHistory(
+                triggerCheck.baselineContent || "",
+                content,
+                triggerCheck.baselineVersionId,
+                triggerCheck.targetVersionId!,
+                targetStoryId,
+                historyLogs, // Pass latest history logs
+                baseHandleAddHistory,
+                baseHandleUpdateHistory,
+                baseHandleDeleteHistory
+            );
+        } else {
+            console.warn("[triggerAutoHistory] evaluateBackgroundTrigger returned false or missing params", triggerCheck);
+        }
+    }, [currentStoryId, content, saveGlobalStoryState, activeMommyIds, activeNerdIds, activeLoreIds, evaluateBackgroundTrigger, processBackgroundHistory, historyLogs, baseHandleAddHistory, baseHandleUpdateHistory, baseHandleDeleteHistory, setCurrentStoryId]);
 
     return {
         // Direct Pass-throughs
@@ -258,6 +291,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         processingTargetName,
         evaluateBackgroundTrigger,
         processBackgroundHistory,
+        triggerAutoHistory,
 
         // History specifics passed out explicitly
         invalidations,
