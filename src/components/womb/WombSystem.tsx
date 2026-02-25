@@ -206,7 +206,6 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     onNewStory={handleNewStory}
                     onUndo={handleUndo}
                     onRedo={handleRedo}
-                    onCutContext={handleCutContext}
                     canUndo={canUndo}
                     canRedo={canRedo}
                     redoBranchCount={redoBranchCount}
@@ -411,6 +410,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                 storyId={currentStoryId}
                 lang={lang}
                 showWombDebugInfo={showWombDebugInfo}
+                onCutContext={handleCutContext}
             />
         </div>
     );

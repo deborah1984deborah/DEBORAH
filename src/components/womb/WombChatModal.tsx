@@ -7,9 +7,10 @@ interface WombChatModalProps {
     storyId: string | null;
     lang: 'ja' | 'en';
     showWombDebugInfo?: boolean;
+    onCutContext?: () => void;
 }
 
-export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, storyId, lang, showWombDebugInfo }) => {
+export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, storyId, lang, showWombDebugInfo, onCutContext }) => {
     const [interactions, setInteractions] = useState<WombChatInteraction[]>([]);
     const [selectedChunk, setSelectedChunk] = useState<number | null>(null);
     const [expandedThoughts, setExpandedThoughts] = useState<Set<string>>(new Set());
@@ -120,34 +121,82 @@ export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, s
                         <span style={{ fontSize: '1.5rem' }}>💬</span>
                         {lang === 'ja' ? 'WOMB 生成履歴 ' : 'WOMB Interaction History'}
                     </h2>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#94a3b8',
-                            cursor: 'pointer',
-                            padding: '0.5rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: '50%',
-                            transition: 'background-color 0.2s, color 0.2s'
-                        }}
-                        onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                            e.currentTarget.style.color = 'white';
-                        }}
-                        onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = '#94a3b8';
-                        }}
-                    >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        {/* Cut Context Button */}
+                        {onCutContext && (
+                            <button
+                                onClick={() => {
+                                    if (window.confirm(lang === 'ja' ? 'これまでのコンテキスト（記憶）を切り離し、次回の生成から新規チャットとして開始します。よろしいですか？' : 'Are you sure you want to sever the context? The next generation will start a new chunk.')) {
+                                        onCutContext();
+                                        onClose(); // Optional: close the modal after cutting
+                                    }
+                                }}
+                                style={{
+                                    background: 'rgba(244, 63, 94, 0.1)', // Rose-500 tinted background
+                                    border: '1px solid rgba(244, 63, 94, 0.3)',
+                                    color: '#fda4af', // Rose-300
+                                    cursor: 'pointer',
+                                    padding: '0.4rem 0.75rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 'bold',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.backgroundColor = 'rgba(244, 63, 94, 0.2)';
+                                    e.currentTarget.style.color = '#fff1f2';
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.backgroundColor = 'rgba(244, 63, 94, 0.1)';
+                                    e.currentTarget.style.color = '#fda4af';
+                                }}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20 7h-9"></path>
+                                    <path d="M14 17H5"></path>
+                                    <circle cx="17" cy="17" r="3"></circle>
+                                    <circle cx="7" cy="7" r="3"></circle>
+                                    <path d="m9.2 10 3.2 4"></path>
+                                    <path d="m14.8 10-3.2 4"></path>
+                                </svg>
+                                {lang === 'ja' ? 'コンテキストを切り離す' : 'Sever Context'}
+                            </button>
+                        )}
+
+                        {/* Close Button */}
+                        <button
+                            onClick={onClose}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#94a3b8',
+                                cursor: 'pointer',
+                                padding: '0.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '50%',
+                                transition: 'background-color 0.2s, color 0.2s'
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                                e.currentTarget.style.color = 'white';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = '#94a3b8';
+                            }}
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Chunk Selector */}

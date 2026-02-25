@@ -19,7 +19,6 @@ interface WombEditorProps {
     redoBranchCount?: number;
     showWombDebugInfo?: boolean;
     isCordProcessing?: boolean;
-    onCutContext?: () => void;
     onOpenChatModal: () => void;
 }
 
@@ -40,7 +39,6 @@ export const WombEditor: React.FC<WombEditorProps> = ({
     redoBranchCount = 0,
     showWombDebugInfo,
     isCordProcessing,
-    onCutContext,
     onOpenChatModal
 }) => {
     const editorRef = useRef<any>(null); // Monaco editor instance
@@ -539,48 +537,6 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
                     </svg>
                 </button>
-
-                {/* CUT CONTEXT BUTTON */}
-                {onCutContext && (
-                    <button
-                        onClick={onCutContext}
-                        title={lang === 'ja' ? 'コンテキストを切り離す（次から新規チャット）' : 'Sever Context (Start New Chunk)'}
-                        style={{
-                            background: 'none', // Remove background
-                            border: 'none', // Remove border
-                            color: isLocked ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.7)', // Dimmer color
-                            width: '32px', // Slightly smaller hit area
-                            height: '32px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: isLocked ? 'default' : 'pointer', // Change cursor
-                            transition: 'all 0.2s ease',
-                            padding: 0 // Remove padding
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!isLocked) {
-                                e.currentTarget.style.color = '#f43f5e'; // Highlight with Rose color on hover
-                                e.currentTarget.style.transform = 'scale(1.1)'; // Slight scale effect
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (!isLocked) {
-                                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'; // Revert
-                                e.currentTarget.style.transform = 'scale(1)'; // Revert scale
-                            }
-                        }}
-                    >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 7h-9"></path>
-                            <path d="M14 17H5"></path>
-                            <circle cx="17" cy="17" r="3"></circle>
-                            <circle cx="7" cy="7" r="3"></circle>
-                            <path d="m9.2 10 3.2 4"></path>
-                            <path d="m14.8 10-3.2 4"></path>
-                        </svg>
-                    </button>
-                )}
 
                 {/* UNDO BUTTON */}
                 <button
