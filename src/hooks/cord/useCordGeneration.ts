@@ -64,7 +64,9 @@ export const useCordGeneration = ({
             const freshCurrentSessions: ChatSession[] = freshSessionsStrForCheck ? JSON.parse(freshSessionsStrForCheck) : sessions;
             const currentSession = freshCurrentSessions.find(s => s.id === sessionId);
 
-            let systemPrompt = lang === 'ja'
+            const sessionLang = currentSession?.aiLang || lang;
+
+            let systemPrompt = sessionLang === 'ja'
                 ? "あなたはCORDという名のアシスタントです。ユーザーの執筆やアイデア出しをクリエイティブにサポートしてください。"
                 : "You are an assistant named CORD. Creatively support the user's writing and brainstorming.";
 
@@ -114,7 +116,7 @@ export const useCordGeneration = ({
             const cordTools = [{
                 functionDeclarations: [{
                     name: "insert_womb_instruction",
-                    description: lang === 'ja'
+                    description: sessionLang === 'ja'
                         ? "WOMBのエディタの現在のカーソル位置に、指定したAIインストラクションを挿入します。ユーザーの代わりに指示を書き込む際に使用します。"
                         : "Inserts the specified AI instruction at the current cursor position in the WOMB editor. Use this to write instructions on behalf of the user.",
                     parameters: {
@@ -122,14 +124,14 @@ export const useCordGeneration = ({
                         properties: {
                             instruction_text: {
                                 type: "STRING",
-                                description: lang === 'ja' ? "挿入する具体的な指示文。" : "The specific instruction text to insert."
+                                description: sessionLang === 'ja' ? "挿入する具体的な指示文。" : "The specific instruction text to insert."
                             }
                         },
                         required: ["instruction_text"]
                     }
                 }, {
                     name: "add_womb_history",
-                    description: lang === 'ja'
+                    description: sessionLang === 'ja'
                         ? "ユーザーから明確な指示があった場合のみ使用します。対象のキャラクター(Entity)のHistoryに出来事や情報を追記します。対象が一意に定まらない場合はシステムから候補が返されるので、ユーザーに質問して対象のIDを絞り込んでください。"
                         : "Use ONLY when explicitly instructed by the user. Adds a new event to the History of the target character. If the target is ambiguous, candidates will be returned to you so you can ask the user to clarify the ID.",
                     parameters: {
@@ -137,15 +139,15 @@ export const useCordGeneration = ({
                         properties: {
                             entity_query: {
                                 type: "STRING",
-                                description: lang === 'ja' ? "ユーザーが指定した対象キャラクターの名前やキーワード。" : "The Name or keyword of the target character specified by the user."
+                                description: sessionLang === 'ja' ? "ユーザーが指定した対象キャラクターの名前やキーワード。" : "The Name or keyword of the target character specified by the user."
                             },
                             entity_id: {
                                 type: "STRING",
-                                description: lang === 'ja' ? "対象を完全に特定できている場合(ユーザーからIDを指定された等)のシステムID。不明な場合は省略。" : "The system ID of the character if uniquely identified. Omit if unsure."
+                                description: sessionLang === 'ja' ? "対象を完全に特定できている場合(ユーザーからIDを指定された等)のシステムID。不明な場合は省略。" : "The system ID of the character if uniquely identified. Omit if unsure."
                             },
                             history_text: {
                                 type: "STRING",
-                                description: lang === 'ja' ? "Historyに追記する情報。" : "The information to append to the History."
+                                description: sessionLang === 'ja' ? "Historyに追記する情報。" : "The information to append to the History."
                             }
                         },
                         required: ["entity_query", "history_text"]
@@ -207,7 +209,7 @@ export const useCordGeneration = ({
                     });
                     window.dispatchEvent(event);
 
-                    const functionLogMsg = lang === 'ja'
+                    const functionLogMsg = sessionLang === 'ja'
                         ? 'WOMBにインストラクションを記述しました。'
                         : 'Inserted instruction into WOMB.';
 
@@ -253,7 +255,7 @@ export const useCordGeneration = ({
                         }
                     } catch (e) {
                         console.error("AI Follow up failed after function call", e);
-                        addMessage('ai', lang === 'ja' ? '処理を完了しましたが、応答でエラーが発生しました。' : 'Action completed, but failed to generate response.', sessionId);
+                        addMessage('ai', sessionLang === 'ja' ? '処理を完了しましたが、応答でエラーが発生しました。' : 'Action completed, but failed to generate response.', sessionId);
                     }
                 } else if (response.functionCall.name === 'add_womb_history') {
                     const args = response.functionCall.args;
@@ -398,7 +400,7 @@ export const useCordGeneration = ({
                         }
                     } catch (e) {
                         console.error("AI Follow up failed after function call", e);
-                        addMessage('ai', lang === 'ja' ? '処理を完了しましたが、応答でエラーが発生しました。' : 'Action completed, but failed to generate response.', sessionId);
+                        addMessage('ai', sessionLang === 'ja' ? '処理を完了しましたが、応答でエラーが発生しました。' : 'Action completed, but failed to generate response.', sessionId);
                     }
                 }
             } else if (response.text || response.thoughtSummary) {
@@ -415,7 +417,7 @@ export const useCordGeneration = ({
                     if (sessionToUpdate && sessionToUpdate.title === 'New Chat') {
                         try {
                             // Prompt AI to generate a title
-                            const titlePrompt = lang === 'ja'
+                            const titlePrompt = sessionLang === 'ja'
                                 ? `次のユーザーの入力を元に、このチャットのタイトルを20文字以内で作成してください。\n※「(〇〇文字)」のような文字数のカウントやカッコなどの補足情報は一切含めず、純粋なタイトル文字列のみを出力してください。\n\nユーザー入力: "${currentMessages[0].content}"`
                                 : `Create a title for this chat based on the following user input. Keep it under 20 characters.\n* Output ONLY the pure title string without quotes, parentheses, or character counts.\n\nUser input: "${currentMessages[0].content}"`;
 
@@ -435,8 +437,9 @@ export const useCordGeneration = ({
 
         } catch (error: any) {
             console.error("CORD AI Generate Error:", error);
+            const fallbackLang = lang;
             // Fallback to mock on API Error (e.g., invalid key)
-            const responseText = lang === 'ja'
+            const responseText = fallbackLang === 'ja'
                 ? 'なるほど、それは興味深いですね。（※API通信エラーのためモック応答です）'
                 : 'I see, that sounds interesting. (Mock response due to API error)';
             addMessage('ai', responseText, sessionId);

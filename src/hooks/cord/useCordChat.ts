@@ -4,7 +4,7 @@ import { useCordDebug } from './useCordDebug';
 
 export const useCordChat = (currentStoryId?: string, lang: 'ja' | 'en' = 'ja') => {
     // 1. Session & Storage Management
-    const session = useCordSession(currentStoryId);
+    const session = useCordSession(currentStoryId, lang);
 
     // 2. Debug State Management
     const debug = useCordDebug();

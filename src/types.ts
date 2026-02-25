@@ -98,6 +98,7 @@ export interface ChatSession {
     storyId?: string; // Optional: Link to a specific Story
     isGlobal?: boolean; // Flag for global chats
     isAwareOfWombStory?: boolean; // Flag for WOMB Context awareness
+    aiLang?: 'ja' | 'en'; // The language the AI should strictly use for this session
     createdAt: number;
     updatedAt: number;
 }

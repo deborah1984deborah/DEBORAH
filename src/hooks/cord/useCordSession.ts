@@ -5,7 +5,7 @@ import { ChatMessageData } from '../../utils/gemini';
 const STORAGE_KEY_SESSIONS = 'cord_chat_sessions';
 const STORAGE_KEY_MESSAGES_PREFIX = 'cord_chat_messages_';
 
-export const useCordSession = (currentStoryId?: string) => {
+export const useCordSession = (currentStoryId?: string, lang?: 'ja' | 'en') => {
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -93,6 +93,7 @@ export const useCordSession = (currentStoryId?: string) => {
                 storyId: isGlobalScope ? undefined : currentStoryId,
                 isGlobal: isGlobalScope,
                 isAwareOfWombStory: isGlobalScope ? false : isNewChatAwareOfWombStory, // Explicitly set Context awareness
+                aiLang: lang || 'ja', // Persist the UI language explicitly for this session
                 createdAt: Date.now(),
                 updatedAt: Date.now()
             };
