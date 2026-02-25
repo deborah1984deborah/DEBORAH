@@ -5,7 +5,15 @@ import { ApiKeyWarning } from './components/shared/ApiKeyWarning';
 import './styles/global.css';
 
 function App() {
-    const [lang, setLang] = useState<'ja' | 'en'>('ja')
+    const [lang, setLang] = useState<'ja' | 'en'>(() => {
+        const savedLang = localStorage.getItem('deborah_lang')
+        return (savedLang === 'ja' || savedLang === 'en') ? savedLang : 'ja'
+    })
+
+    const handleSetLang = (newLang: 'ja' | 'en') => {
+        setLang(newLang)
+        localStorage.setItem('deborah_lang', newLang)
+    }
 
     const [showSplash, setShowSplash] = useState(true)
     const [currentSystem, setCurrentSystem] = useState<'MOMMY' | 'WOMB'>('MOMMY')
@@ -98,13 +106,13 @@ function App() {
                         <div className="slider"></div>
                         <button
                             className={`lang-btn ${lang === 'ja' ? 'active' : ''}`}
-                            onClick={() => setLang('ja')}
+                            onClick={() => handleSetLang('ja')}
                         >
                             Japanese (日本語)
                         </button>
                         <button
                             className={`lang-btn ${lang === 'en' ? 'active' : ''}`}
-                            onClick={() => setLang('en')}
+                            onClick={() => handleSetLang('en')}
                         >
                             English
                         </button>

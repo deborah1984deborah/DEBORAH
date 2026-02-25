@@ -2,7 +2,7 @@ import { useCordSession } from './useCordSession';
 import { useCordGeneration } from './useCordGeneration';
 import { useCordDebug } from './useCordDebug';
 
-export const useCordChat = (currentStoryId?: string) => {
+export const useCordChat = (currentStoryId?: string, lang: 'ja' | 'en' = 'ja') => {
     // 1. Session & Storage Management
     const session = useCordSession(currentStoryId);
 
@@ -11,7 +11,7 @@ export const useCordChat = (currentStoryId?: string) => {
 
     // 3. AI Generation & Tool Execution Logic
     const generation = useCordGeneration({
-        lang: 'ja', // Defaulting to 'ja' or could be passed via context/props if useCordChat takes it
+        lang,
         sessions: session.sessions,
         messages: session.messages,
         addMessage: session.addMessage,

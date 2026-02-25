@@ -45,10 +45,10 @@ export const useWombGeneration = ({
             const { callGeminiChat } = await import('../../utils/gemini');
 
             // Call the shared context builder
-            const { systemInstruction, dynamicStoryContext, cleanedContent, matchedLoreItems } = await buildWombContext();
+            const { systemInstruction, dynamicStoryContext, matchedLoreItems } = await buildWombContext();
 
             // Construction of payload
-            const payloadContent = `${dynamicStoryContext}\n\n=== CONTINUE FROM HERE ===\n\n${cleanedContent}`;
+            const payloadContent = `${dynamicStoryContext}\n\n=== CONTINUE FROM HERE ===\n`;
 
             // Set debug info
             if (showWombDebugInfo) {
