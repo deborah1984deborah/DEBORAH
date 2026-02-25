@@ -79,8 +79,8 @@ export const BranchSelectorModal: React.FC<BranchSelectorModalProps> = ({
 
                 {/* Candidate Cards Grid */}
                 <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                    display: 'flex',
+                    flexDirection: 'column',
                     gap: '1rem',
                     overflowY: 'auto',
                     padding: '0.5rem'
@@ -115,7 +115,6 @@ export const BranchSelectorModal: React.FC<BranchSelectorModalProps> = ({
                                     display: 'flex',
                                     flexDirection: 'column',
                                     gap: '0.5rem',
-                                    height: '160px', // Fixed height
                                     transition: 'all 0.2s ease',
                                     position: 'relative',
                                     overflow: 'hidden'
