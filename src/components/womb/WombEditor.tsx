@@ -616,20 +616,16 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                     {redoBranchCount > 1 && (
                         <div style={{
                             position: 'absolute',
-                            top: '-4px',
-                            right: '-4px',
-                            backgroundColor: '#ef4444', // Red-500
+                            top: '0px',
+                            right: '0px',
                             color: 'white',
-                            fontSize: '0.6rem',
+                            fontSize: '0.75rem',
                             fontWeight: 'bold',
-                            width: '16px',
-                            height: '16px',
-                            borderRadius: '50%',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            boxShadow: '0 0 5px rgba(239, 68, 68, 0.5)',
-                            pointerEvents: 'none' // Don't block clicks
+                            pointerEvents: 'none',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.8)' // Add a small shadow to ensure readability over any background
                         }}>
                             {redoBranchCount}
                         </div>
