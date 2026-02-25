@@ -280,27 +280,41 @@ export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, s
 
                                             {/* Debug: Raw Thought Parts (Independent of Accordion) */}
                                             {showWombDebugInfo && msg.rawParts && msg.rawParts.length > 0 && (
-                                                <div style={{
-                                                    marginBottom: '1rem',
-                                                    padding: '0.75rem',
-                                                    backgroundColor: 'rgba(0,0,0,0.4)',
-                                                    border: '1px solid rgba(56, 189, 248, 0.4)',
-                                                    borderRadius: '6px',
-                                                }}>
-                                                    <div style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.75rem' }}>
-                                                        [DEBUG] Raw Signature (msg.rawParts):
-                                                    </div>
-                                                    <pre style={{
-                                                        margin: 0,
-                                                        color: '#cbd5e1',
-                                                        fontSize: '0.75rem',
-                                                        overflowX: 'auto',
-                                                        whiteSpace: 'pre-wrap',
-                                                        wordBreak: 'break-all'
-                                                    }}>
-                                                        {JSON.stringify(msg.rawParts, null, 2)}
-                                                    </pre>
-                                                </div>
+                                                (() => {
+                                                    const signatures = msg.rawParts
+                                                        .filter(p => typeof p.thoughtSignature === 'string')
+                                                        .map(p => p.thoughtSignature);
+
+                                                    const thoughtCalls = msg.rawParts
+                                                        .filter(p => !!p.thoughtCall);
+
+                                                    if (signatures.length === 0 && thoughtCalls.length === 0) return null;
+
+                                                    return (
+                                                        <div style={{
+                                                            marginBottom: '1rem',
+                                                            padding: '0.75rem',
+                                                            backgroundColor: 'rgba(0,0,0,0.4)',
+                                                            border: '1px solid rgba(56, 189, 248, 0.4)',
+                                                            borderRadius: '6px',
+                                                        }}>
+                                                            <div style={{ color: '#38bdf8', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.75rem' }}>
+                                                                [DEBUG] Raw Signature:
+                                                            </div>
+                                                            <pre style={{
+                                                                margin: 0,
+                                                                color: '#cbd5e1',
+                                                                fontSize: '0.75rem',
+                                                                overflowX: 'auto',
+                                                                whiteSpace: 'pre-wrap',
+                                                                wordBreak: 'break-all'
+                                                            }}>
+                                                                {signatures.join('\n\n')}
+                                                                {thoughtCalls.map(tc => `\n\n[cord.thoughtCall] ${tc.thoughtCall?.name}: ${tc.thoughtCall?.args?.thought}`).join('')}
+                                                            </pre>
+                                                        </div>
+                                                    );
+                                                })()
                                             )}
 
                                             {/* Generated Content */}
