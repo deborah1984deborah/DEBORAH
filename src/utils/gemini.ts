@@ -144,7 +144,8 @@ export const callGeminiChat = async (
     messages: ChatMessageData[],
     model: GeminiModel = 'gemini-2.5-flash',
     systemInstruction?: string,
-    tools?: any[]
+    tools?: any[],
+    aiThinkingLevel?: 'low' | 'medium' | 'high'
 ): Promise<{ text?: string, functionCall?: { name: string, args: any }, rawParts: any[], thoughtSummary?: string }> => {
     if (!apiKey) {
         throw new Error('API Key is missing');
@@ -210,12 +211,13 @@ export const callGeminiChat = async (
         }
 
         // Enable Thinking Process ONLY for models that explicitly support it (like Gemini 3.1 Pro)
-        if (model.includes('3.')) {
+        if (model.includes('3.') && aiThinkingLevel) {
             if (!requestBody.generationConfig) {
                 requestBody.generationConfig = {};
             }
             requestBody.generationConfig.thinkingConfig = {
-                includeThoughts: true
+                includeThoughts: true,
+                thinkingLevel: aiThinkingLevel === 'high' ? 'HIGH' : aiThinkingLevel === 'medium' ? 'MEDIUM' : 'LOW'
             };
         }
 
