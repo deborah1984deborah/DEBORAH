@@ -111,7 +111,7 @@ export const useWombGeneration = ({
                 messages,
                 aiModel,
                 systemInstruction,
-                undefined, // tools
+                [{ googleSearch: {} }], // tools
                 aiThinkingLevel
             );
 

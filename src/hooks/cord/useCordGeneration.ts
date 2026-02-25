@@ -150,9 +150,10 @@ export const useCordGeneration = ({
                                 description: sessionLang === 'ja' ? "Historyに追記する情報。" : "The information to append to the History."
                             }
                         },
-                        required: ["entity_query", "history_text"]
                     }
                 }]
+            }, {
+                googleSearch: {}
             }];
 
             // Update Debug State visually
