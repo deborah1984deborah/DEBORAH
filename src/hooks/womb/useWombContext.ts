@@ -62,8 +62,9 @@ Example:
 #endregion
 
 CRITICAL RULE 2:
-When generating the continuation, DO NOT start your response with empty lines or newlines (e.g., \n\n). 
-Write the text so that it connects completely naturally and seamlessly from the very end of the user's provided text. You may use line breaks normally within your writing for paragraphs or dialogue, but do not use them to artificially separate your writing from the user's previous writing.
+When generating the continuation, DO NOT start your response with empty lines or spaces. Write the text so that it connects completely naturally and seamlessly from the very end of the user's provided text. 
+However, if you EXPLICITLY want to start your response with a line break (for example, to start a new paragraph immediately), you MUST start your response with the exact special string "@@@n".
+Do not use normal newlines or spaces at the very beginning of your response.
 ===========================
 `;
         let textToSend = cleanedContent;

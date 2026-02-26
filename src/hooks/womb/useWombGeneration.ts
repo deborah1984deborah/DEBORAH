@@ -117,6 +117,13 @@ export const useWombGeneration = ({
 
             if (!generatedText) throw new Error("No text generated");
 
+            let cleanGeneratedText = generatedText;
+            if (/^\s*@@@n/.test(cleanGeneratedText)) {
+                cleanGeneratedText = '\n' + cleanGeneratedText.replace(/^\s*@@@n\s*/, '');
+            } else {
+                cleanGeneratedText = cleanGeneratedText.replace(/^\s+/, '');
+            }
+
             // Log the generation interactions with current chunkId
             const now = Date.now();
             const newInteractions: WombChatInteraction[] = [
@@ -139,6 +146,7 @@ export const useWombGeneration = ({
                 {
                     id: `interaction_${now}_ai`,
                     storyId: newId,
+                    // チャット履歴にはWOMBが出力した生の `@@@n` のまま保存する
                     role: 'ai',
                     content: generatedText,
                     rawParts,
@@ -155,8 +163,8 @@ export const useWombGeneration = ({
                 console.error("Failed to save WOMB chat interactions to local storage", e);
             }
 
-            // Append generated text
-            const newContent = content + generatedText;
+            // Append generated text (using the cleaned version for the editor)
+            const newContent = content + cleanGeneratedText;
             setContent(newContent);
 
             // Save POST-GEN via helper
