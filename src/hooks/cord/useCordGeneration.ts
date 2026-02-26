@@ -16,7 +16,7 @@ interface UseCordGenerationProps {
     STORAGE_KEY_MESSAGES_PREFIX: string;
     saveSessionsToStorage: (updatedSessions: ChatSession[]) => void;
     triggerAutoHistory?: () => void;
-    triggerWombGeneration?: () => Promise<void>;
+    triggerWombGeneration?: (blueprintOverride?: string) => Promise<void>;
 }
 
 export const useCordGeneration = ({
@@ -352,7 +352,7 @@ export const useCordGeneration = ({
                         } else if (finalFunctionCall.name === 'trigger_womb_generation') {
                             if (triggerWombGeneration) {
                                 // Important: We DO NOT await here if it blocks the chat UI, but triggering it is safe.
-                                triggerWombGeneration();
+                                triggerWombGeneration(accumulatedText);
                                 functionLogMsg = sessionLang === 'ja' ? "WOMBに対し、続きの執筆プロセス（Narrative Blueprintの作成と生成）を開始するよう指示しました。" : "Instructed WOMB to start the continuation writing process (Narrative Blueprint and Generation).";
                             } else {
                                 functionLogMsg = "[System Error] triggerWombGeneration is not available.";

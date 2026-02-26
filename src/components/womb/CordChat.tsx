@@ -15,7 +15,7 @@ interface CordChatProps {
     isBackgroundProcessing?: boolean;
     processingTargetName?: string | null;
     triggerAutoHistory?: () => void;
-    triggerWombGeneration?: () => Promise<void>;
+    triggerWombGeneration?: (blueprintOverride?: string) => Promise<void>;
 }
 
 export const CordChat: React.FC<CordChatProps> = ({
@@ -96,7 +96,7 @@ export const CordChat: React.FC<CordChatProps> = ({
         if (!inputValue.trim() || isTyping) return;
 
         // 1. Add User Message (Returns active sessionId)
-        const activeSessionId = addMessage('user', inputValue);
+        const activeSessionId = addMessage('user', inputValue, currentSessionId || undefined);
         setInputValue('');
 
         // 2. Trigger AI Response
@@ -128,6 +128,60 @@ export const CordChat: React.FC<CordChatProps> = ({
         setCurrentSessionId(sessionId);
         setShowHistory(false);
     };
+
+    // --- Event Listener setup for Background/Remote triggers ---
+    useEffect(() => {
+        const handleStartBackgroundMode = (e: Event) => {
+            const customEvent = e as CustomEvent<{ targetName: string, isFullHistory: boolean }>;
+            const { targetName } = customEvent.detail;
+
+            // Set Scope to Global to allow history extraction
+            setChatScope('global');
+
+            // Generate system prompt/message asking AI to perform history extraction
+            const instructionMsg = lang === 'ja'
+                ? `【自動ヒストリー抽出リクエスト】\n現在エディタに書かれている最新の本文を分析し、「${targetName}」に関する新しい出来事や情報を抽出してください。\n抽出内容があれば、追加ツール(add_womb_history)を使用してデータベースに登録してください。`
+                : `[Auto History Extraction Request]\nPlease analyze the latest text in the editor and extract any new events or information regarding "${targetName}".\nIf there is new information, use the add_womb_history tool to register it to the database.`;
+
+            // Adding the message will automatically trigger the API if we call generateAiResponse
+            const newSessionId = addMessage('user', instructionMsg, currentSessionId || undefined);
+            generateAiResponse(newSessionId, apiKey, aiModel, getWombContext);
+
+            // Close modal if open to show the work (handled by parent usually, but we manage state here)
+            setShowHistory(false);
+        };
+
+        const handleRequestWombGen = () => {
+            console.log("[CordChat] Received cord:request-womb-gen event.");
+            // Always ensure the active session is aware of WOMB
+            if (!chatScope) setChatScope('story');
+            if (currentSessionId) {
+                const session = sessions.find(s => s.id === currentSessionId);
+                if (session && !session.isAwareOfWombStory) {
+                    toggleWombAwareness(currentSessionId, true);
+                }
+            } else {
+                setIsNewChatAwareOfWombStory(true);
+            }
+
+            // Create the user message that triggers the generation
+            const instructionMsg = lang === 'ja'
+                ? `【自動生成リクエスト】\n現在の本文の展開をもとに、Narrative Blueprint（執筆指示）を作成し、WOMBへ物語の続きの執筆処理を開始させてください。`
+                : `[Auto Generation Request]\nBased on the current text, create a Narrative Blueprint (writing instructions) and trigger WOMB to write the continuation of the story.`;
+
+            // Add the message to chat and immediately trigger generation
+            const newSessionId = addMessage('user', instructionMsg, currentSessionId || undefined);
+            generateAiResponse(newSessionId, apiKey, aiModel, getWombContext);
+        };
+
+        window.addEventListener('cord:start-background-mode', handleStartBackgroundMode);
+        window.addEventListener('cord:request-womb-gen', handleRequestWombGen);
+
+        return () => {
+            window.removeEventListener('cord:start-background-mode', handleStartBackgroundMode);
+            window.removeEventListener('cord:request-womb-gen', handleRequestWombGen);
+        };
+    }, [lang, currentSessionId, setChatScope, addMessage, sessions, toggleWombAwareness, setIsNewChatAwareOfWombStory, chatScope]);
 
     return (
         <div style={{
@@ -572,7 +626,7 @@ export const CordChat: React.FC<CordChatProps> = ({
                         color: '#94a3b8',
                         cursor: isLocked ? 'default' : 'pointer',
                         userSelect: 'none',
-                        marginTop: '6px' // Pushed down slightly more 
+                        marginTop: '6px' // Pushed down slightly more
                     }}>
                         <input
                             type="checkbox"
