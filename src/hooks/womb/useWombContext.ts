@@ -61,7 +61,9 @@ Example:
 // Make the next scene more dramatic and focus on Deborah's anger.
 #endregion
 
-Do NOT output these instructions in your generated text. Instead, strictly FOLLOW the instructions provided in those lines when writing the continuation of the story.
+CRITICAL RULE 2:
+When generating the continuation, DO NOT start your response with empty lines or newlines (e.g., \n\n). 
+Write the text so that it connects completely naturally and seamlessly from the very end of the user's provided text. You may use line breaks normally within your writing for paragraphs or dialogue, but do not use them to artificially separate your writing from the user's previous writing.
 ===========================
 `;
         let textToSend = cleanedContent;

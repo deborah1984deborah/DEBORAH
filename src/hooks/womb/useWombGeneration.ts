@@ -156,7 +156,7 @@ export const useWombGeneration = ({
             }
 
             // Append generated text
-            const newContent = content + '\n' + generatedText;
+            const newContent = content + generatedText;
             setContent(newContent);
 
             // Save POST-GEN via helper
