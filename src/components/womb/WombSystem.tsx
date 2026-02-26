@@ -321,6 +321,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                             showDebugInfo={showDebugInfo}
                             apiKey={apiKey}
                             aiModel={aiModel}
+                            isWombGenerating={isGenerating}
                             getWombContext={buildWombContext}
                             onProcessingChange={setIsCordProcessing}
                             onDebugDataChange={setCordDebugData}

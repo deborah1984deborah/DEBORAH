@@ -21,13 +21,14 @@ interface CordChatProps {
     processingTargetName?: string | null;
     triggerAutoHistory?: () => void;
     triggerWombGeneration?: (blueprintOverride?: string) => Promise<void>;
+    isWombGenerating?: boolean;
 }
 
 export const CordChat: React.FC<CordChatProps> = ({
     lang, currentStoryId, showDebugInfo = false, apiKey, aiModel,
     getWombContext, onProcessingChange, onDebugDataChange,
     isBackgroundProcessing = false, processingTargetName = null,
-    triggerAutoHistory, triggerWombGeneration
+    triggerAutoHistory, triggerWombGeneration, isWombGenerating = false
 }) => {
     // Integrate Custom Hook
     const {
@@ -65,7 +66,7 @@ export const CordChat: React.FC<CordChatProps> = ({
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const isLocked = isTyping || isBackgroundProcessing;
+    const isLocked = isTyping || isBackgroundProcessing || isWombGenerating;
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -250,6 +251,7 @@ export const CordChat: React.FC<CordChatProps> = ({
                     {/* SCOPE SELECTOR (Only shown/enabled when NO session is active) */}
                     <CordChatScopeSelector
                         lang={lang}
+                        isLocked={isLocked}
                         displayedScope={displayedScope}
                         currentSessionId={currentSessionId}
                         setChatScope={setChatScope}
