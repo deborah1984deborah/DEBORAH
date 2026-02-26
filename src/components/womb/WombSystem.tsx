@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import '../../styles/womb.css';
-import { CordChat } from './CordChat';
+import { CordChat } from './cord/CordChat';
 
 interface WombSystemProps {
     lang: 'ja' | 'en';
@@ -8,9 +8,9 @@ interface WombSystemProps {
 
 import { LorebookModal } from './lorebook';
 import { StoryListModal } from './StoryListModal';
-import { WombSettingsPanel } from './WombSettingsPanel';
+import { WombSettingsPanel } from './settings/WombSettingsPanel';
 import { WombHeader } from './WombHeader';
-import { WombEditor } from './WombEditor';
+import { WombEditor } from './editor/WombEditor';
 import { WombDebugPanel } from './WombDebugPanel';
 import { CordDebugPanel } from './CordDebugPanel';
 import { BranchSelectorModal } from './BranchSelectorModal';

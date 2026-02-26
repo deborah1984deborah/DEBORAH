@@ -1,7 +1,7 @@
 
 // Gemini API Configuration
 // Gemini API Configuration (Updated for 2026 - Gemini 2.5 & 3.1)
-import { SafetySetting } from '../components/womb/WombSafetyModal';
+import { SafetySetting } from '../components/womb/settings/WombSafetyModal';
 
 export type GeminiModel = 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
 const getGeminiUrl = (model: GeminiModel) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
