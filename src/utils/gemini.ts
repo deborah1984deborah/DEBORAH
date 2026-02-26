@@ -171,12 +171,11 @@ export const callGeminiChat = async (
                         }]
                     };
                 } else if (msg.rawParts && msg.role === 'ai') {
-                    // Filter out thoughts from history. Feeding thoughts back to the model 
-                    // causes it to repeat its past thoughts and lose track of the conversation.
-                    const filteredParts = msg.rawParts.filter(p => !p.thought && !p.thought_signature && !p.thoughtSignature);
+                    // Send the full rawParts (including thoughts) back to the model 
+                    // so it retains its deep context and reasoning history.
                     return {
                         role: 'model',
-                        parts: filteredParts.length > 0 ? filteredParts : [{ text: '' }]
+                        parts: msg.rawParts.length > 0 ? msg.rawParts : [{ text: '' }]
                     };
                 } else if (msg.functionCall) {
                     // Fallback for older stored messages that lack rawParts but had a function call
@@ -306,8 +305,7 @@ export const callGeminiChatStream = async function* (
                         parts: [{ functionResponse: { name: msg.functionCall?.name, response: { result: msg.content } } }]
                     };
                 } else if (msg.rawParts && msg.role === 'ai') {
-                    const filteredParts = msg.rawParts.filter(p => !p.thought && !p.thought_signature && !p.thoughtSignature);
-                    return { role: 'model', parts: filteredParts.length > 0 ? filteredParts : [{ text: '' }] };
+                    return { role: 'model', parts: msg.rawParts.length > 0 ? msg.rawParts : [{ text: '' }] };
                 } else if (msg.functionCall) {
                     return { role: 'model', parts: [{ functionCall: msg.functionCall }] };
                 } else {
