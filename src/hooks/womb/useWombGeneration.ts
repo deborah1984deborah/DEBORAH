@@ -19,13 +19,14 @@ interface UseWombGenerationProps {
     aiThinkingLevel: 'low' | 'medium' | 'high';
     wombChunkLimit: number;
     showWombDebugInfo: boolean;
+    isCordActiveModeEnabled: boolean;
     buildWombContext: () => Promise<any>;
 }
 
 export const useWombGeneration = ({
     lang, apiKey, aiModel, content, setContent, currentStoryId, setCurrentStoryId,
     activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState,
-    lastSavedContentRef, showWombDebugInfo, buildWombContext, aiThinkingLevel, wombChunkLimit
+    lastSavedContentRef, showWombDebugInfo, buildWombContext, aiThinkingLevel, wombChunkLimit, isCordActiveModeEnabled
 }: UseWombGenerationProps) => {
 
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -45,10 +46,49 @@ export const useWombGeneration = ({
             const { callGeminiChat } = await import('../../utils/gemini');
 
             // Call the shared context builder
-            const { systemInstruction, dynamicStoryContext, matchedLoreItems } = await buildWombContext();
+            const { systemInstruction, dynamicStoryContext, fullStoryContext, matchedLoreItems } = await buildWombContext();
+
+            let finalDynamicStoryContext = dynamicStoryContext;
+
+            if (isCordActiveModeEnabled) {
+                const cordSystemInstruction = lang === 'ja'
+                    ? `あなたは能動的物語分析AI「CORD」です。
+ユーザーが執筆している小説の現在の全文コンテキスト（設定、履歴、本文全文）を読み込み、次に続く展開を生成する執筆AI「WOMB」に向けて、具体的な執筆指示書（Narrative Blueprint）を作成してください。
+
+【Narrative Blueprint の要件】
+- 現状の簡単な分析と要約
+- 次に書くべき展開や描写の具体的な提案
+- 出力は指示テキストのみとし、挨拶や余計な会話は含めないこと。`
+                    : `You are the Active Story Analysis AI, "CORD".
+Read the current full context (settings, history, entire text) of the novel the user is writing, and create specific writing instructions (Narrative Blueprint) for the writing AI, "WOMB", to generate the continuation.
+
+[Narrative Blueprint Requirements]
+- Provide a brief analysis and summary of the current situation.
+- Propose specific developments and descriptions for the next part to be written.
+- Output ONLY the instruction text; do not include greetings or conversational filler.`;
+
+                try {
+                    const cordMessages: any[] = [{ role: 'user', content: fullStoryContext }];
+                    const { text: cordInstructions } = await callGeminiChat(
+                        apiKey,
+                        cordMessages,
+                        aiModel,
+                        cordSystemInstruction,
+                        undefined,
+                        aiThinkingLevel
+                    );
+
+                    if (cordInstructions) {
+                        console.log("[CORD Narrative Blueprint]:\n", cordInstructions);
+                        finalDynamicStoryContext = `==========================================\n【Narrative Blueprint from CORD】\n==========================================\n${cordInstructions}\n\n${dynamicStoryContext}`;
+                    }
+                } catch (e) {
+                    console.error("CORD analysis failed, proceeding without it", e);
+                }
+            }
 
             // Construction of payload
-            const payloadContent = `${dynamicStoryContext}\n\n=== CONTINUE FROM HERE ===\n`;
+            const payloadContent = `${finalDynamicStoryContext}\n\n=== CONTINUE FROM HERE ===\n`;
 
             // Set debug info
             if (showWombDebugInfo) {

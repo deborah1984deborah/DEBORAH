@@ -15,13 +15,14 @@ interface CordChatProps {
     isBackgroundProcessing?: boolean;
     processingTargetName?: string | null;
     triggerAutoHistory?: () => void;
+    triggerWombGeneration?: () => Promise<void>;
 }
 
 export const CordChat: React.FC<CordChatProps> = ({
     lang, currentStoryId, showDebugInfo = false, apiKey, aiModel,
     getWombContext, onProcessingChange, onDebugDataChange,
     isBackgroundProcessing = false, processingTargetName = null,
-    triggerAutoHistory
+    triggerAutoHistory, triggerWombGeneration
 }) => {
     // Integrate Custom Hook
     const {
@@ -47,7 +48,7 @@ export const CordChat: React.FC<CordChatProps> = ({
         cordDebugSystemPrompt,
         cordDebugInputText,
         cordDebugMatchedEntities
-    } = useCordChat(currentStoryId, lang, triggerAutoHistory);
+    } = useCordChat(currentStoryId, lang, triggerAutoHistory, triggerWombGeneration);
 
     const [inputValue, setInputValue] = useState('');
     const [showHistory, setShowHistory] = useState(false); // Modal State

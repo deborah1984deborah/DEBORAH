@@ -139,7 +139,16 @@ ${textToSend}
 
         const derivedTitle = content.split('\n')[0]?.trim() || "Untitled Story";
 
-        return { systemInstruction, dynamicStoryContext, entityContext, scanTargetContent, matchedLoreItems, allActiveLoreItems, allLoreItems, cleanedContent, storyTitle: derivedTitle };
+        let fullStoryContext = `==========================================
+【The Main Story User is Writing】
+==========================================
+${cleanedContent}
+==========================================`;
+        if (entityContext) {
+            fullStoryContext += `\n\n--- Lorebook Context ---\n${entityContext}`;
+        }
+
+        return { systemInstruction, dynamicStoryContext, fullStoryContext, entityContext, scanTargetContent, matchedLoreItems, allActiveLoreItems, allLoreItems, cleanedContent, storyTitle: derivedTitle };
     }, [content, keywordScanRange, wombContextLength, mommyList, activeMommyIds, nerdList, activeNerdIds, loreList, activeLoreIds, activeHistoryLogs, currentStoryId]);
 
     return {

@@ -124,7 +124,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         savedStories: story.savedStories,
         globalRelations, activeMommyIds, activeNerdIds, activeLoreIds,
         saveGlobalStoryState, lastSavedContentRef, // pass UNWRAPPED to generation hook so it can manage its own lifecycle pre/post 
-        showWombDebugInfo, buildWombContext
+        showWombDebugInfo, buildWombContext, isCordActiveModeEnabled
     });
     const { isGenerating, handleSave, handleCutContext, debugSystemPrompt, debugInputText, debugMatchedEntities } = generation;
 
@@ -292,6 +292,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         evaluateBackgroundTrigger,
         processBackgroundHistory,
         triggerAutoHistory,
+        triggerWombGeneration: handleSave,
 
         // History specifics passed out explicitly
         invalidations,

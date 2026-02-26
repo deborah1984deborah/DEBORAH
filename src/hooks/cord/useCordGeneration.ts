@@ -16,6 +16,7 @@ interface UseCordGenerationProps {
     STORAGE_KEY_MESSAGES_PREFIX: string;
     saveSessionsToStorage: (updatedSessions: ChatSession[]) => void;
     triggerAutoHistory?: () => void;
+    triggerWombGeneration?: () => Promise<void>;
 }
 
 export const useCordGeneration = ({
@@ -27,7 +28,8 @@ export const useCordGeneration = ({
     STORAGE_KEY_SESSIONS,
     STORAGE_KEY_MESSAGES_PREFIX,
     saveSessionsToStorage,
-    triggerAutoHistory
+    triggerAutoHistory,
+    triggerWombGeneration
 }: UseCordGenerationProps) => {
     const [isTyping, setIsTyping] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
@@ -173,6 +175,15 @@ export const useCordGeneration = ({
                     description: sessionLang === 'ja'
                         ? "ユーザーから「今の本文からヒストリーを抽出して」「最新の流れを更新して」のように自動抽出を依頼された場合に使用します。内部で本文の差分解析プロセスを強制起動し、対象キャラクターのHistoryを自動更新させます。"
                         : "Use this when the user requests to automatically extract or record history from the current text. It manually triggers the background diff-analysis process to update character histories.",
+                    parameters: {
+                        type: "OBJECT",
+                        properties: {}
+                    }
+                }, {
+                    name: "trigger_womb_generation",
+                    description: sessionLang === 'ja'
+                        ? "ユーザーから「続きを書いて」「〇〇の展開を生成して」のように、WOMB(執筆AI)による本文の自動生成を依頼された場合に使用します。これを呼び出すと、あなたが作成した分析・指示(Narrative Blueprint)に基づいてWOMBが小説の続きを執筆します。"
+                        : "Use this when the user asks you to 'write the continuation' or 'generate the next part'. Calling this will trigger the WOMB (Writing AI) to write the next part of the novel based on your analysis and instructions (Narrative Blueprint).",
                     parameters: {
                         type: "OBJECT",
                         properties: {}
@@ -336,6 +347,15 @@ export const useCordGeneration = ({
                                 functionLogMsg = sessionLang === 'ja' ? "本文からの自動ヒストリー抽出処理を開始しました。変更があった場合はまもなく反映されます。" : "Started automatic history extraction from the text. Changes will be reflected shortly if any are found.";
                             } else {
                                 functionLogMsg = "[System Error] triggerAutoHistory is not available.";
+                            }
+                            uiDisplayMsg = functionLogMsg;
+                        } else if (finalFunctionCall.name === 'trigger_womb_generation') {
+                            if (triggerWombGeneration) {
+                                // Important: We DO NOT await here if it blocks the chat UI, but triggering it is safe.
+                                triggerWombGeneration();
+                                functionLogMsg = sessionLang === 'ja' ? "WOMBに対し、続きの執筆プロセス（Narrative Blueprintの作成と生成）を開始するよう指示しました。" : "Instructed WOMB to start the continuation writing process (Narrative Blueprint and Generation).";
+                            } else {
+                                functionLogMsg = "[System Error] triggerWombGeneration is not available.";
                             }
                             uiDisplayMsg = functionLogMsg;
                         } else {
