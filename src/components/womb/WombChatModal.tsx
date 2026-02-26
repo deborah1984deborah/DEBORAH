@@ -23,24 +23,30 @@ export const WombChatModal: React.FC<WombChatModalProps> = ({ isOpen, onClose, s
     const maxChunk = availableChunks.length > 0 ? availableChunks[availableChunks.length - 1] : 0;
 
     useEffect(() => {
-        if (isOpen && storyId) {
-            const storageKey = `womb_chat_${storyId}`;
-            const stored = localStorage.getItem(storageKey);
-            if (stored) {
-                try {
-                    const parsed = JSON.parse(stored);
-                    // Filter out the dummy cutoff message so it doesn't render as a chat bubble
-                    const filteredParsed = parsed.filter((i: any) => i.content !== '-- Context manually cleared --');
-                    setInteractions(filteredParsed);
+        if (isOpen) {
+            if (storyId) {
+                const storageKey = `womb_chat_${storyId}`;
+                const stored = localStorage.getItem(storageKey);
+                if (stored) {
+                    try {
+                        const parsed = JSON.parse(stored);
+                        // Filter out the dummy cutoff message so it doesn't render as a chat bubble
+                        const filteredParsed = parsed.filter((i: any) => i.content !== '-- Context manually cleared --');
+                        setInteractions(filteredParsed);
 
-                    // Auto-select max chunk on load if not already tracking
-                    const newMaxChunk = filteredParsed.length > 0 ? Math.max(...filteredParsed.map((i: any) => i.chunkId || 0)) : 0;
-                    setSelectedChunk(newMaxChunk);
-                } catch (e) {
-                    console.error("Failed to parse WOMB chat history", e);
+                        // Auto-select max chunk on load if not already tracking
+                        const newMaxChunk = filteredParsed.length > 0 ? Math.max(...filteredParsed.map((i: any) => i.chunkId || 0)) : 0;
+                        setSelectedChunk(newMaxChunk);
+                    } catch (e) {
+                        console.error("Failed to parse WOMB chat history", e);
+                    }
+                } else {
+                    setInteractions([]); // Clear if none found
+                    setSelectedChunk(null);
                 }
             } else {
-                setInteractions([]); // Clear if none found
+                // Clear state if storyId is null (e.g., when creating a new story)
+                setInteractions([]);
                 setSelectedChunk(null);
             }
         }
