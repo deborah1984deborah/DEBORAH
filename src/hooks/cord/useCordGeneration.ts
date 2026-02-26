@@ -71,8 +71,26 @@ export const useCordGeneration = ({
             const sessionLang = currentSession?.aiLang || lang;
 
             let systemPrompt = sessionLang === 'ja'
-                ? "あなたはCORDという名のアシスタントです。ユーザーの執筆やアイデア出しをクリエイティブにサポートしてください。"
-                : "You are an assistant named CORD. Creatively support the user's writing and brainstorming.";
+                ? `あなたは能動的物語分析AI「CORD」です。ユーザーの執筆やアイデア出しをサポートしてください。
+重要な役割として、WOMB（執筆AI）に続きを書かせるための「Narrative Blueprint（展開指示書）」の作成があります。
+自動生成を求められた場合は、必ず以下の要件とフォーマットを満たしたNarrative Blueprintを作成してください。
+
+【Narrative Blueprint の要件】
+- 現状の簡単な分析と要約
+- 次のシーンで達成すべき目的（Must-have）
+- 登場人物の感情の動きとアクション
+- セリフのトーンや描写のテイスト設定
+- 出力は指示テキストのみとし、挨拶や余計な会話は含めないこと。`
+                : `You are the Active Story Analysis AI, "CORD". Support the user's writing and brainstorming.
+An important role of yours is to create a "Narrative Blueprint" for WOMB (the writing AI) to write the continuation.
+When auto-generation is requested, you MUST create a Narrative Blueprint that meets the following requirements and format.
+
+[Narrative Blueprint Requirements]
+- Provide a brief analysis and summary of the current situation.
+- The objective that must be achieved in the next scene (Must-have).
+- The character's emotional movements and actions.
+- The tone of the dialogue and the taste of the description.
+- Output ONLY the instruction text; do not include greetings or conversational filler.`;
 
             let wombContextString = "";
             if (currentSession?.isAwareOfWombStory && getWombContext) {
@@ -186,7 +204,13 @@ export const useCordGeneration = ({
                         : "Use this when the user asks you to 'write the continuation' or 'generate the next part'. Calling this will trigger the WOMB (Writing AI) to write the next part of the novel based on your analysis and instructions (Narrative Blueprint).",
                     parameters: {
                         type: "OBJECT",
-                        properties: {}
+                        properties: {
+                            blueprint_text: {
+                                type: "STRING",
+                                description: sessionLang === 'ja' ? "WOMBに渡すためのNarrative Blueprintのテキスト全文" : "The full text of the Narrative Blueprint to pass to WOMB"
+                            }
+                        },
+                        required: ["blueprint_text"]
                     }
                 }]
             }]; // Notice: googleSearch is deliberately omitted to prevent API 400 errors
@@ -352,8 +376,9 @@ export const useCordGeneration = ({
                         } else if (finalFunctionCall.name === 'trigger_womb_generation') {
                             if (triggerWombGeneration) {
                                 // Important: We DO NOT await here if it blocks the chat UI, but triggering it is safe.
-                                triggerWombGeneration(accumulatedText);
-                                functionLogMsg = sessionLang === 'ja' ? "WOMBに対し、続きの執筆プロセス（Narrative Blueprintの作成と生成）を開始するよう指示しました。" : "Instructed WOMB to start the continuation writing process (Narrative Blueprint and Generation).";
+                                const blueprintText = finalFunctionCall.args?.blueprint_text || accumulatedText;
+                                triggerWombGeneration(blueprintText);
+                                functionLogMsg = sessionLang === 'ja' ? "Narrative Blueprintを作成し、WOMBに送信しました。" : "The Narrative Blueprint is created and sent to WOMB.";
                             } else {
                                 functionLogMsg = "[System Error] triggerWombGeneration is not available.";
                             }
