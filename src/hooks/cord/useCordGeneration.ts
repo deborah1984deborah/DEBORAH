@@ -128,8 +128,8 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
 
                         // Construct Output Length Constraint for CORD
                         const lengthConstraint = sessionLang === 'ja'
-                            ? `\n\n【出力形式の制約】\nあなたの返答テキストは、全体で約 ${cordOutputLength} 文字程度になるように調整してください。`
-                            : `\n\n[Output Constraints]\nAdjust the character count of your response to approximately ${cordOutputLength} characters.`;
+                            ? `\n\n【出力形式の制約】\nあなたの返答テキストは、全体で大体 ${cordOutputLength} 文字以内になるように調整してください。`
+                            : `\n\n[Output Constraints]\nAdjust the character count of your response to be roughly within ${cordOutputLength} characters.`;
 
                         const userInputHeader = `${lengthConstraint}\n\n=== User Input ===\n`;
 

@@ -62,8 +62,8 @@ export const useWombGeneration = ({
 
             // Construct Output Length Constraint
             const lengthConstraint = lang === 'ja'
-                ? `\n\n【出力形式の制約】\n出力する本文の文字数は、約 ${wombOutputLength} 文字程度になるように調整してください。`
-                : `\n\n[Output Constraints]\nAdjust the character count of the generated text to approximately ${wombOutputLength} characters.`;
+                ? `\n\n【出力形式の制約】\n出力する本文の文字数は、大体 ${wombOutputLength} 文字以内になるように調整してください。`
+                : `\n\n[Output Constraints]\nAdjust the character count of the generated text to be roughly within ${wombOutputLength} characters.`;
 
             let finalDynamicStoryContext = `${lengthConstraint}\n${dynamicStoryContext}`;
 
