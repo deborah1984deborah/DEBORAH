@@ -331,6 +331,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                             processingTargetName={processingTargetName}
                             triggerAutoHistory={triggerAutoHistory}
                             triggerWombGeneration={triggerWombGeneration}
+                            cordOutputLength={cordOutputLength}
                         />
                     </div>
                 </div>

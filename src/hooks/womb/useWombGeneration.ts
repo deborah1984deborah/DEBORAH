@@ -21,12 +21,13 @@ interface UseWombGenerationProps {
     showWombDebugInfo: boolean;
     isCordActiveModeEnabled: boolean;
     buildWombContext: () => Promise<any>;
+    wombOutputLength: number;
 }
 
 export const useWombGeneration = ({
     lang, apiKey, aiModel, content, setContent, currentStoryId, setCurrentStoryId,
     activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState,
-    lastSavedContentRef, showWombDebugInfo, buildWombContext, aiThinkingLevel, wombChunkLimit, isCordActiveModeEnabled
+    lastSavedContentRef, showWombDebugInfo, buildWombContext, aiThinkingLevel, wombChunkLimit, isCordActiveModeEnabled, wombOutputLength
 }: UseWombGenerationProps) => {
 
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -59,11 +60,16 @@ export const useWombGeneration = ({
             // Call the shared context builder
             const { systemInstruction, dynamicStoryContext, matchedLoreItems } = await buildWombContext();
 
-            let finalDynamicStoryContext = dynamicStoryContext;
+            // Construct Output Length Constraint
+            const lengthConstraint = lang === 'ja'
+                ? `\n\n【出力形式の制約】\n出力する本文の文字数は、約 ${wombOutputLength} 文字程度になるように調整してください。`
+                : `\n\n[Output Constraints]\nAdjust the character count of the generated text to approximately ${wombOutputLength} characters.`;
+
+            let finalDynamicStoryContext = `${lengthConstraint}\n${dynamicStoryContext}`;
 
             if (isCordActiveModeEnabled && typeof blueprintOverride === 'string' && blueprintOverride.trim()) {
                 console.log("[CORD Narrative Blueprint received]:\n", blueprintOverride);
-                finalDynamicStoryContext = `==========================================\n【Narrative Blueprint from CORD】\n==========================================\n${blueprintOverride}\n\n${dynamicStoryContext}`;
+                finalDynamicStoryContext = `==========================================\n【Narrative Blueprint from CORD】\n==========================================\n${blueprintOverride}\n${lengthConstraint}\n${dynamicStoryContext}`;
             }
 
             // Construction of payload

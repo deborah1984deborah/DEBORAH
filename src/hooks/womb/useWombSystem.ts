@@ -20,7 +20,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     const settings = useWombSettings();
     const {
         apiKey, aiModel, aiThinkingLevel, keywordScanRange, showWombDebugInfo, wombContextLength, activeCordHistoryInterval,
-        isCordActiveModeEnabled, wombChunkLimit
+        isCordActiveModeEnabled, wombChunkLimit, wombOutputLength
     } = settings;
 
     // 2. Lore
@@ -118,7 +118,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
 
     // 8. Generation & Debug
     const generation = useWombGeneration({
-        lang, apiKey, aiModel, aiThinkingLevel, wombChunkLimit,
+        lang, apiKey, aiModel, aiThinkingLevel, wombChunkLimit, wombOutputLength,
         content, setContent,
         currentStoryId, setCurrentStoryId,
         savedStories: story.savedStories,

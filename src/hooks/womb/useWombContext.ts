@@ -99,7 +99,7 @@ Do not use normal newlines or spaces at the very beginning of your response.
         }
 
 
-        let dynamicStoryContext = `==========================================
+        const storyContentBlock = `==========================================
 【The Main Story User is Writing】
 ==========================================
 ${textToSend}
@@ -134,8 +134,10 @@ ${textToSend}
                     entityContext += `\n\n=== PAST EVENTS IN THIS STORY ===${historyStr}`;
                 }
             }
-            dynamicStoryContext += `\n\n--- Lorebook Context ---\n${entityContext}`;
         }
+
+        const lorebookBlock = entityContext ? `--- Lorebook Context ---\n${entityContext}\n\n` : "";
+        const dynamicStoryContext = `${lorebookBlock}${storyContentBlock}`;
 
         const derivedTitle = content.split('\n')[0]?.trim() || "Untitled Story";
 

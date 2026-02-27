@@ -17,6 +17,7 @@ interface UseCordGenerationProps {
     saveSessionsToStorage: (updatedSessions: ChatSession[]) => void;
     triggerAutoHistory?: () => void;
     triggerWombGeneration?: (blueprintOverride?: string) => Promise<void>;
+    cordOutputLength: number;
 }
 
 export const useCordGeneration = ({
@@ -29,7 +30,8 @@ export const useCordGeneration = ({
     STORAGE_KEY_MESSAGES_PREFIX,
     saveSessionsToStorage,
     triggerAutoHistory,
-    triggerWombGeneration
+    triggerWombGeneration,
+    cordOutputLength
 }: UseCordGenerationProps) => {
     const [isTyping, setIsTyping] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
@@ -99,7 +101,7 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                 try {
                     const wombContext = await getWombContext();
                     if (wombContext) {
-                        wombContextString += `\n\n[System Info: Current WOMB Story Context]\n`;
+                        wombContextString += `[System Info: Current WOMB Story Context]\n`;
                         if (wombContext.entityContext) {
                             wombContextString += `--- Matched Entities ---\n${wombContext.entityContext}\n\n`;
                         }
@@ -123,13 +125,21 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
             // Assemble final array for API call
             const apiMessages = [...currentMessages];
             if (wombContextString && apiMessages.length > 0) {
-                // Find the last user message and append the context to it
+                // Find the last user message and prepend the context to it, keeping the user input at the very end
                 for (let i = apiMessages.length - 1; i >= 0; i--) {
                     if (apiMessages[i].role === 'user') {
-                        // Create a new object to avoid mutating the React state/localStorage array
+                        const originalInput = apiMessages[i].content;
+
+                        // Construct Output Length Constraint for CORD
+                        const lengthConstraint = sessionLang === 'ja'
+                            ? `\n\n【出力形式の制約】\nあなたの返答テキストは、全体で約 ${cordOutputLength} 文字程度になるように調整してください。`
+                            : `\n\n[Output Constraints]\nAdjust the character count of your response to approximately ${cordOutputLength} characters.`;
+
+                        const userInputHeader = `${lengthConstraint}\n\n=== User Input ===\n`;
+
                         apiMessages[i] = {
                             ...apiMessages[i],
-                            content: apiMessages[i].content + wombContextString
+                            content: wombContextString + userInputHeader + originalInput
                         };
                         break;
                     }
