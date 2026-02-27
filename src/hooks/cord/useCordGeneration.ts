@@ -224,8 +224,15 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
             }]; // Notice: googleSearch is deliberately omitted to prevent API 400 errors
 
             // Update Debug State visually
+            let lastUserInput = "";
+            for (let i = apiMessages.length - 1; i >= 0; i--) {
+                if (apiMessages[i].role === 'user') {
+                    lastUserInput = apiMessages[i].content;
+                    break;
+                }
+            }
             cordDebug.setCordDebugSystemPrompt(systemPrompt);
-            cordDebug.setCordDebugInputText(JSON.stringify(apiMessages, null, 2));
+            cordDebug.setCordDebugInputText(lastUserInput);
 
             // Call Chat API with Streaming, loop for multi-turn function calls
             setIsStreaming(true);
