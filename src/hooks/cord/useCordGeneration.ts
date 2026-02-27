@@ -82,8 +82,8 @@ export const useCordGeneration = ({
 - 次のシーンで達成すべき目的（Must-have）
 - 登場人物の感情の動きとアクション
 - セリフのトーンや描写のテイスト設定
-- Narrative Blueprintを生成する際は、trigger_womb_generationツールの引数のみにNarrative Blueprintを渡し、ユーザーへの返答テキスト（通常の会話出力）にはNarrative Blueprintの内容を含めないでください。
-- 出力は指示テキストのみとし、挨拶や余計な会話は含めないこと。`
+- Narrative Blueprintを生成する際は、trigger_womb_generationツールの引数のみにNarrative Blueprintを渡してください。ユーザーへの返答テキストにはBlueprintの内容を含めないでください。
+- ツール呼び出しが成功した後は、ユーザーへの返答として「WOMBで生成を開始しました」などの短い完了報告のみをテキスト出力して回答を終了してください。同じツールを複数回呼ばないでください。`
                 : `You are the Active Story Analysis AI, "CORD". Support the user's writing and brainstorming.
 An important role of yours is to create a "Narrative Blueprint" for WOMB (the writing AI) to write the continuation.
 When auto-generation is requested, you MUST create a Narrative Blueprint that meets the following requirements and format.
@@ -93,8 +93,8 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
 - The objective that must be achieved in the next scene (Must-have).
 - The character's emotional movements and actions.
 - The tone of the dialogue and the taste of the description.
-- When generating a Narrative Blueprint, pass the Narrative Blueprint ONLY to the arguments of the trigger_womb_generation tool, and do not include the contents of the Narrative Blueprint in the response text (normal conversation output) to the user.
-- Output ONLY the instruction text; do not include greetings or conversational filler.`;
+- When generating a Narrative Blueprint, pass the Narrative Blueprint ONLY to the arguments of the trigger_womb_generation tool. Do not include the contents of the Narrative Blueprint in the response text.
+- After the tool call is successful, output a short confirmation text like "Started generation in WOMB" and finish your response. Do not call the same tool multiple times in a row.`;
 
             let wombContextString = "";
             if (currentSession?.isAwareOfWombStory && getWombContext) {
@@ -239,6 +239,8 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
             let currentApiMessages = [...apiMessages];
             let loopCount = 0;
             const MAX_LOOPS = 5;
+            let hasTriggeredWomb = false;
+            let hasTriggeredAutoHistory = false;
 
             try {
                 while (loopCount < MAX_LOOPS) {
@@ -309,8 +311,8 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                             const event = new CustomEvent('womb:insert-instruction', { detail: { instructionText } });
                             window.dispatchEvent(event);
 
-                            functionLogMsg = sessionLang === 'ja' ? 'WOMBにインストラクションを記述しました。' : 'Inserted instruction into WOMB.';
-                            uiDisplayMsg = functionLogMsg;
+                            functionLogMsg = sessionLang === 'ja' ? 'システム: WOMBにインストラクションを記述しました。ツール呼び出しが終わったら短いテキストで完了を報告してターンを終了してください。' : 'System: Inserted instruction into WOMB. Report completion if no other tools are needed.';
+                            uiDisplayMsg = sessionLang === 'ja' ? 'WOMBにインストラクションを記述しました。' : 'Inserted instruction into WOMB.';
                         } else if (finalFunctionCall.name === 'add_womb_history') {
                             const args = finalFunctionCall.args;
                             const entityQuery = args.entity_query || args.entityQuery || args.entity_name || args.entityName;
@@ -378,23 +380,35 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                                 uiDisplayMsg = `${targetEntityName}(${targetEntityId})のヒストリーに追記しました(${storyTitle})`;
                             }
                         } else if (finalFunctionCall.name === 'trigger_auto_history') {
-                            if (triggerAutoHistory) {
+                            if (hasTriggeredAutoHistory) {
+                                functionLogMsg = sessionLang === 'ja'
+                                    ? "システムエラー: すでにこのターンで抽出を実行済です。短い完了応答を出力して終了してください。"
+                                    : "System Error: Extraction already triggered. Output a short confirmation text and end your turn.";
+                            } else if (triggerAutoHistory) {
+                                hasTriggeredAutoHistory = true;
                                 triggerAutoHistory();
-                                functionLogMsg = sessionLang === 'ja' ? "本文からの自動ヒストリー抽出処理を開始しました。変更があった場合はまもなく反映されます。" : "Started automatic history extraction from the text. Changes will be reflected shortly if any are found.";
+                                functionLogMsg = sessionLang === 'ja' ? "システム: 自動ヒストリー抽出を開始しました。これ以上のツール呼び出しは不要です。「ヒストリーの抽出を開始しました」とテキスト出力してターンを終了してください。" : "System: Started automatic history extraction. No further tool calls are needed. Output a short confirmation text and end your turn.";
                             } else {
                                 functionLogMsg = "[System Error] triggerAutoHistory is not available.";
                             }
-                            uiDisplayMsg = functionLogMsg;
+                            uiDisplayMsg = sessionLang === 'ja' ? "本文からの自動ヒストリー抽出処理を開始しました。変更があった場合はまもなく反映されます。" : "Started automatic history extraction from the text. Changes will be reflected shortly if any are found.";
                         } else if (finalFunctionCall.name === 'trigger_womb_generation') {
-                            if (triggerWombGeneration) {
+                            if (hasTriggeredWomb) {
+                                functionLogMsg = sessionLang === 'ja'
+                                    ? "システムエラー: すでにこのターンでWOMBをトリガーしています。これ以上のツール呼び出しは不要です。「生成を開始しました」などの短いテキストを返答して終了してください。"
+                                    : "System Error: WOMB already triggered. Output a short confirmation text and end your turn.";
+                            } else if (triggerWombGeneration) {
+                                hasTriggeredWomb = true;
                                 // Important: We DO NOT await here if it blocks the chat UI, but triggering it is safe.
                                 const blueprintText = finalFunctionCall.args?.blueprint_text || accumulatedText;
                                 triggerWombGeneration(blueprintText);
-                                functionLogMsg = sessionLang === 'ja' ? "Narrative Blueprintを作成し、WOMBに送信しました。" : "The Narrative Blueprint is created and sent to WOMB.";
+                                functionLogMsg = sessionLang === 'ja'
+                                    ? "システム: Narrative Blueprintを作成し、WOMBに送信しました。これ以上のツール呼び出しは不要です。「WOMBにて生成を開始しました」とテキスト出力してターンを終了してください。"
+                                    : "System: The Narrative Blueprint is created and sent to WOMB. No further tool calls are needed. Output a short text like '[Generating in WOMB]' to end your turn.";
                             } else {
                                 functionLogMsg = "[System Error] triggerWombGeneration is not available.";
                             }
-                            uiDisplayMsg = functionLogMsg;
+                            uiDisplayMsg = sessionLang === 'ja' ? "Narrative Blueprintを作成し、WOMBに送信しました。" : "The Narrative Blueprint is created and sent to WOMB.";
                         } else {
                             // Unknown function
                             functionLogMsg = `[System] Unknown function called: ${finalFunctionCall.name}`;
