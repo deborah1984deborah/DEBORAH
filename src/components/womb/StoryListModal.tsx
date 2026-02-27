@@ -25,6 +25,23 @@ export const StoryListModal: React.FC<{
             justifyContent: 'center',
             zIndex: 1000
         }} onClick={onClose}>
+            {/* INJECT CUSTOM SCROLLBAR STYLE FOR THIS MODAL ONLY */}
+            <style>{`
+                .story-list-scroll::-webkit-scrollbar {
+                    width: 8px;
+                }
+                .story-list-scroll::-webkit-scrollbar-track {
+                    background: rgba(255, 255, 255, 0.1);
+                }
+                .story-list-scroll::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.45);
+                    border-radius: 4px;
+                }
+                .story-list-scroll::-webkit-scrollbar-thumb:hover {
+                    background: rgba(255, 255, 255, 0.65);
+                }
+            `}</style>
+
             <div style={{
                 width: '500px',
                 height: '80vh', // Fixed height instead of maxHeight
@@ -77,7 +94,7 @@ export const StoryListModal: React.FC<{
                     </div>
                 </div>
 
-                <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className="story-list-scroll" style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '4px' }}>
                     {filteredStories.length === 0 ? (
                         <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
                             {savedStories.length === 0 ? "No saved stories found." : "No stories match your search."}
