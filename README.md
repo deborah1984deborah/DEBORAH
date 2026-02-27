@@ -50,12 +50,13 @@ By acting as a "brilliant editor and assistant" that bridges this information ga
 
 ---
 
-## 4. Current Implementation Status (Unimplemented Features)
+## 4. Recently Implemented Integrated Features
 
-The following features are established in the core design but are currently under development or planned for future updates:
+The core vision of tight integration between WOMB and CORD has been successfully realized, bringing advanced AI collaboration to the writing process:
 
-- **Automatic History Generation/Updating by CORD**: The functionality where CORD automatically tracks and records changes or states of Entities as the story progresses. *(Currently designed, but not yet implemented.)*
-- **Context Optimization by CORD**: The advanced intermediary step where CORD interprets the story situation, selectively filters information, and synthesizes it into the optimal format before passing it to WOMB. *(Currently designed, but not yet implemented.)*
+- **Automatic History Extraction by CORD**: CORD runs in the background to analyze the latest story developments written by WOMB. It automatically detects new events and updates the history logs for active entities, ensuring the Lorebook stays perfectly synchronized with the narrative without manual user effort.
+- **Narrative Blueprint Generation**: Before WOMB writes the next continuation, CORD can be invoked to analyze the current scene and generate a "Narrative Blueprint." This blueprint provides high-level directions, emotional arcs, and structural goals (Must-haves) to guide WOMB, acting as an active director for the generative process.
+- **Dynamic Context Injection**: CORD selectively packages the story body, matched entity definitions, and relevant recent history logs into optimized prompts. This structured data is fed directly into WOMB or CORD's own processing pipeline with precise length and stylistic constraints, ensuring highly accurate context-awareness.
 
 ---
 
@@ -123,12 +124,13 @@ MOMMYは物語の世界観のベースとなる情報を作成し、管理する
 
 ---
 
-## 4. 現在の未実装機能（開発予定）
+## 4. 最近実装された連携機能
 
-以下の機能は基本設計およびコンセプトに組み込まれていますが、現在は未実装（今後のアップデートで実装予定）となります。
+WOMBとCORDの密接な連携という核心的なビジョンが実現され、執筆プロセスにおいて高度なAIの協調動作が可能になりました。
 
-- **CORDによるヒストリーの自動作成・更新**: 物語の進行に合わせて、Entityの歴史や状態の変化を全自動で記録・追跡する機能。
-- **CORDによるコンテキストの最適化**: CORDが物語の状況を解釈し、WOMBに渡すべき情報を取捨選択・総合して最適な形で渡す機能。（現在は通常のキーワード反応に近い形ですが、将来的にはこの高度な連携が実装されます）
+- **CORDによるヒストリーの自動抽出**: WOMBによって新しく執筆された物語の展開をCORDがバックグラウンドで分析します。登場人物に関する新しい出来事を自動的に検知してヒストリーログを更新し、手動操作なしでLorebookと物語の進行を常に同期させます。
+- **Narrative Blueprint（展開指示書）の生成**: WOMBに続きを書かせる直前にCORDを介入させ、現在のシーンを分析して「Narrative Blueprint」を生成させることができます。これには次の展開の目標（Must-have）、感情の動き、構成の指示が含まれ、WOMBの生成プロセスを導く優秀な監督として機能します。
+- **動的なコンテキスト注入**: CORDは、物語本文、マッチしたキャラクター設定、および関連する最新のヒストリーログを選択的にパッケージ化して最適化されたプロンプトを作成します。この構造化されたデータは、厳密な文字数や書式制約とともにWOMBやCORD自身の処理プロセスへ直接供給され、極めて精度の高い文脈認識を実現しています。
 
 ---
 
