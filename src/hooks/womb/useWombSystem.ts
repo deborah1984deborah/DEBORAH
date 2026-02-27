@@ -132,7 +132,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
 
     // Decorate handleManualSave to use the wrapped saveGlobalStoryState
     const handleManualSave = useCallback(() => {
-        if (!content.trim()) return;
+        if (!content.trim()) return null;
 
         let targetStoryId = currentStoryId;
         if (!targetStoryId) {
@@ -148,6 +148,8 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
             activeNerdIds,
             activeLoreIds
         );
+
+        return targetStoryId;
     }, [content, currentStoryId, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, setCurrentStoryId]);
 
     // Decorate handleAddHistory to automatically pass the current version id

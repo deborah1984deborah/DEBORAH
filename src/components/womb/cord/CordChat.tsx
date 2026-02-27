@@ -11,6 +11,8 @@ import { CordChatBackgroundIndicator, CordChatTypingIndicator } from './CordChat
 interface CordChatProps {
     lang: 'ja' | 'en';
     currentStoryId?: string;
+    content: string;
+    triggerSave: () => string | null | void;
     showDebugInfo?: boolean;
     apiKey: string;
     aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
@@ -26,7 +28,7 @@ interface CordChatProps {
 }
 
 export const CordChat: React.FC<CordChatProps> = ({
-    lang, currentStoryId, showDebugInfo = false, apiKey, aiModel,
+    lang, currentStoryId, content, triggerSave, showDebugInfo = false, apiKey, aiModel,
     getWombContext, onProcessingChange, onDebugDataChange,
     isBackgroundProcessing = false, processingTargetName = null,
     triggerAutoHistory, triggerWombGeneration, isWombGenerating = false,
@@ -56,7 +58,7 @@ export const CordChat: React.FC<CordChatProps> = ({
         cordDebugSystemPrompt,
         cordDebugInputText,
         cordDebugMatchedEntities
-    } = useCordChat(currentStoryId, lang, triggerAutoHistory, triggerWombGeneration, cordOutputLength);
+    } = useCordChat(currentStoryId, content, triggerSave, lang, triggerAutoHistory, triggerWombGeneration, cordOutputLength);
 
     const [inputValue, setInputValue] = useState('');
     const [showHistory, setShowHistory] = useState(false); // Modal State

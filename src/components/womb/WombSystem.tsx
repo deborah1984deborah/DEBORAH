@@ -318,6 +318,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                         <CordChat
                             lang={lang}
                             currentStoryId={currentStoryId || undefined}
+                            content={content}
+                            triggerSave={handleManualSave}
                             showDebugInfo={showDebugInfo}
                             apiKey={apiKey}
                             aiModel={aiModel}

@@ -3,14 +3,16 @@ import { useCordGeneration } from './useCordGeneration';
 import { useCordDebug } from './useCordDebug';
 
 export const useCordChat = (
-    currentStoryId?: string,
+    currentStoryId: string | undefined,
+    content: string,
+    triggerSave: () => string | null | void,
     lang: 'ja' | 'en' = 'ja',
     triggerAutoHistory?: () => void,
     triggerWombGeneration?: () => Promise<void>,
     cordOutputLength: number = 400
 ) => {
     // 1. Session & Storage Management
-    const session = useCordSession(currentStoryId, lang);
+    const session = useCordSession(currentStoryId, content, triggerSave, lang);
 
     // 2. Debug State Management
     const debug = useCordDebug();
