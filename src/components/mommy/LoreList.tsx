@@ -23,7 +23,7 @@ export function LoreList({ lang, loreList, onDelete, onEdit }: Props) {
             {loreList.map((lore) => (
                 <div
                     key={lore.id}
-                    className="glass-card p-4 pb-6 flex gap-4 items-start relative pr-12 cursor-pointer hover:bg-white/10 transition-colors"
+                    className="glass-card p-4 pb-6 flex gap-4 items-start relative cursor-pointer hover:bg-white/10 transition-colors"
                     onClick={() => onEdit(lore)}
                 >
                     {/* Date - Absolute Positioned */}
@@ -37,8 +37,8 @@ export function LoreList({ lang, loreList, onDelete, onEdit }: Props) {
                     </div>
 
                     {/* Info */}
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 pr-12">
+                    <div className="flex-1 min-w-0" style={{ paddingRight: '70px' }}>
+                        <div className="flex items-center gap-2 mb-2">
                             <h3 className="text-xl font-bold truncate">{lore.name}</h3>
                             {lore.isAlwaysActive && (
                                 <span style={{
@@ -71,7 +71,7 @@ export function LoreList({ lang, loreList, onDelete, onEdit }: Props) {
                         </div>
 
                         <div className="text-sm opacity-80 space-y-1">
-                            <div className="line-clamp-2 mb-2 italic bg-black/10 p-1 rounded">
+                            <div className="line-clamp-2 mb-2 italic bg-black/10 p-1.5 rounded">
                                 {lore.summary}
                             </div>
 
