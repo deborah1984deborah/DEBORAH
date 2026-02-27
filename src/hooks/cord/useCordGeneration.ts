@@ -80,6 +80,7 @@ export const useCordGeneration = ({
 - 次のシーンで達成すべき目的（Must-have）
 - 登場人物の感情の動きとアクション
 - セリフのトーンや描写のテイスト設定
+- Narrative Blueprintを生成する際は、trigger_womb_generationツールの引数のみにNarrative Blueprintを渡し、ユーザーへの返答テキスト（通常の会話出力）にはNarrative Blueprintの内容を含めないでください。
 - 出力は指示テキストのみとし、挨拶や余計な会話は含めないこと。`
                 : `You are the Active Story Analysis AI, "CORD". Support the user's writing and brainstorming.
 An important role of yours is to create a "Narrative Blueprint" for WOMB (the writing AI) to write the continuation.
@@ -90,6 +91,7 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
 - The objective that must be achieved in the next scene (Must-have).
 - The character's emotional movements and actions.
 - The tone of the dialogue and the taste of the description.
+- When generating a Narrative Blueprint, pass the Narrative Blueprint ONLY to the arguments of the trigger_womb_generation tool, and do not include the contents of the Narrative Blueprint in the response text (normal conversation output) to the user.
 - Output ONLY the instruction text; do not include greetings or conversational filler.`;
 
             let wombContextString = "";
