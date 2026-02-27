@@ -105,10 +105,6 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                         if (wombContext.entityContext) {
                             wombContextString += `--- Matched Entities ---\n${wombContext.entityContext}\n\n`;
                         }
-                        if (wombContext.allActiveLoreItems && wombContext.allActiveLoreItems.length > 0) {
-                            const availableEntities = wombContext.allActiveLoreItems.map((item: any) => `- Name: ${item.name}`).join('\n');
-                            wombContextString += `--- Currently Active Entities (In UI) ---\n${availableEntities}\n\n`;
-                        }
 
                         if (wombContext.cleanedContent) {
                             wombContextString += `--- Story Body Text ---\n${wombContext.cleanedContent}`;
