@@ -272,7 +272,8 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                     for await (const chunk of stream) {
                         if (chunk.textChunk) {
                             accumulatedText += chunk.textChunk;
-                            setStreamingText(accumulatedText);
+                            // Remove leading newlines/spaces that some models (like GLM) might return
+                            setStreamingText(accumulatedText.trimStart());
                         }
                         if (chunk.thoughtChunk) {
                             accumulatedThought += chunk.thoughtChunk;
@@ -445,7 +446,8 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                         // loop continues!
                     } else if (accumulatedText || accumulatedThought) {
                         // AI finished with text
-                        addMessage('ai', accumulatedText || '', sessionId, undefined, finalRawParts, accumulatedThought || undefined);
+                        const finalText = accumulatedText ? accumulatedText.trimStart() : '';
+                        addMessage('ai', finalText, sessionId, undefined, finalRawParts, accumulatedThought || undefined);
 
                         // Clear streaming state immediately before any background processing
                         setIsStreaming(false);
