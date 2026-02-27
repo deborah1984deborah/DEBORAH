@@ -331,9 +331,6 @@ export const callGeminiChatStream = async function* (
 
         const url = `${getGeminiUrl(model).replace(':generateContent', ':streamGenerateContent')}?alt=sse&key=${apiKey}`;
 
-        console.log("Gemini Stream API Request URL:", url.replace(apiKey, "HIDDEN_KEY"));
-        console.log("Gemini Stream API Request Body:", JSON.stringify(requestBody, null, 2));
-
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -342,7 +339,6 @@ export const callGeminiChatStream = async function* (
 
         if (!response.ok) {
             const errorRawData = await response.text();
-            console.error("Gemini Stream API Raw Error Response:", errorRawData);
             let errorData;
             try { errorData = JSON.parse(errorRawData); } catch (e) { errorData = { error: { message: errorRawData } }; }
             throw new Error(errorData.error?.message || `API Error: ${response.status}`);

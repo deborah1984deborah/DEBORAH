@@ -42,10 +42,11 @@ export const useCordGeneration = ({
     const generateAiResponse = async (
         sessionId: string,
         apiKey: string,
-        aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview',
+        novelAIApiKey: string,
+        aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6',
         getWombContext?: () => Promise<{ systemInstruction: string, entityContext?: string, scanTargetContent?: string, matchedLoreItems: any[], allActiveLoreItems: any[], allLoreItems: any[], cleanedContent: string, storyTitle: string }>
     ) => {
-        if (!apiKey) {
+        if (!apiKey && !novelAIApiKey) {
             // Fallback mock if no API key
             setIsTyping(true);
             setTimeout(() => {
@@ -259,7 +260,14 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                         setStreamingThought('');
                     }
 
-                    const stream = callGeminiChatStream(apiKey, currentApiMessages as any, aiModel, systemPrompt, cordTools);
+                    let stream;
+                    if (aiModel === 'glm-4-6') {
+                        const { callNovelAIChatStream } = await import('../../utils/novelai');
+                        // tools are ignored in NovelAI for now
+                        stream = callNovelAIChatStream(novelAIApiKey, currentApiMessages as any, aiModel, systemPrompt);
+                    } else {
+                        stream = callGeminiChatStream(apiKey, currentApiMessages as any, aiModel as any, systemPrompt, cordTools);
+                    }
 
                     for await (const chunk of stream) {
                         if (chunk.textChunk) {
@@ -297,7 +305,7 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                             addMessage('system', sessionLang === 'ja' ? `ウェブで「${query}」を検索しています...` : `Searching the web for "${query}"...`, sessionId);
                             try {
                                 const { callGeminiSearch } = await import('../../utils/gemini');
-                                const searchResult = await callGeminiSearch(apiKey, query, aiModel);
+                                const searchResult = await callGeminiSearch(apiKey, query, aiModel as any);
 
                                 // Show the short completion notification first
                                 addMessage('system', sessionLang === 'ja' ? `「${query}」の検索結果を取得しました。` : `Got search results for "${query}".`, sessionId);

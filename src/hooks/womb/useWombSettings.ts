@@ -53,11 +53,13 @@ export const useWombSettings = () => {
     const [apiKey, setApiKey] = useState<string>(''); // Gemini
     // TMDB Access Token
     const [tmdbAccessToken, setTmdbAccessToken] = useState<string>('');
+    // NovelAI Access Token
+    const [novelAIApiKey, setNovelAIApiKey] = useState<string>('');
 
     // AI Model
-    const [aiModel, setAiModel] = useState<'gemini-2.5-flash' | 'gemini-3.1-pro-preview'>(() => {
+    const [aiModel, setAiModel] = useState<'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6'>(() => {
         const stored = localStorage.getItem('womb_ai_model');
-        return (stored as 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') || 'gemini-2.5-flash';
+        return (stored as 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6') || 'gemini-2.5-flash';
     });
 
     const [aiThinkingLevel, setAiThinkingLevel] = useState<'low' | 'medium' | 'high'>(() => {
@@ -84,6 +86,15 @@ export const useWombSettings = () => {
             const envTmdbToken = import.meta.env.VITE_TMDB_ACCESS_TOKEN;
             if (envTmdbToken) setTmdbAccessToken(envTmdbToken);
         }
+
+        // NovelAI
+        const storedNovelAIToken = localStorage.getItem('womb_novelai_api_key');
+        if (storedNovelAIToken) {
+            setNovelAIApiKey(storedNovelAIToken);
+        } else {
+            const envNovelAIToken = import.meta.env.VITE_NOVELAI_API_TOKEN;
+            if (envNovelAIToken) setNovelAIApiKey(envNovelAIToken);
+        }
     }, []);
 
     // Save Settings when changed
@@ -94,6 +105,10 @@ export const useWombSettings = () => {
     useEffect(() => {
         if (tmdbAccessToken) localStorage.setItem('womb_tmdb_access_token', tmdbAccessToken);
     }, [tmdbAccessToken]);
+
+    useEffect(() => {
+        if (novelAIApiKey) localStorage.setItem('womb_novelai_api_key', novelAIApiKey);
+    }, [novelAIApiKey]);
 
     useEffect(() => {
         localStorage.setItem('womb_ai_model', aiModel);
@@ -152,6 +167,7 @@ export const useWombSettings = () => {
         showWombDebugInfo, setShowWombDebugInfo,
         apiKey, setApiKey,
         tmdbAccessToken, setTmdbAccessToken,
+        novelAIApiKey, setNovelAIApiKey,
         aiModel, setAiModel,
         aiThinkingLevel, setAiThinkingLevel
     };

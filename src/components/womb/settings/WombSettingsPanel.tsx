@@ -33,8 +33,10 @@ interface WombSettingsPanelProps {
     setApiKey: (key: string) => void;
     tmdbAccessToken: string;
     setTmdbAccessToken: (token: string) => void;
-    aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
-    setAiModel: (model: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') => void;
+    novelAIApiKey: string;
+    setNovelAIApiKey: (key: string) => void;
+    aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6';
+    setAiModel: (model: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6') => void;
     aiThinkingLevel: 'low' | 'medium' | 'high';
     setAiThinkingLevel: (level: 'low' | 'medium' | 'high') => void;
     anchorRef: React.RefObject<HTMLButtonElement>;
@@ -63,6 +65,8 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
     setApiKey,
     tmdbAccessToken,
     setTmdbAccessToken,
+    novelAIApiKey,
+    setNovelAIApiKey,
     aiModel,
     setAiModel,
     aiThinkingLevel,
@@ -182,6 +186,8 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                     setApiKey={setApiKey}
                     tmdbAccessToken={tmdbAccessToken}
                     setTmdbAccessToken={setTmdbAccessToken}
+                    novelAIApiKey={novelAIApiKey}
+                    setNovelAIApiKey={setNovelAIApiKey}
                 />
             </div>
 

@@ -37,6 +37,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         showWombDebugInfo, setShowWombDebugInfo,
         apiKey, setApiKey,
         tmdbAccessToken, setTmdbAccessToken,
+        novelAIApiKey, setNovelAIApiKey,
         aiModel, setAiModel,
         aiThinkingLevel, setAiThinkingLevel,
         isGenerating,
@@ -298,6 +299,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 setApiKey={setApiKey}
                                 tmdbAccessToken={tmdbAccessToken}
                                 setTmdbAccessToken={setTmdbAccessToken}
+                                novelAIApiKey={novelAIApiKey}
+                                setNovelAIApiKey={setNovelAIApiKey}
                                 aiModel={aiModel}
                                 setAiModel={setAiModel}
                                 aiThinkingLevel={aiThinkingLevel}
@@ -322,7 +325,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                             triggerSave={handleManualSave}
                             showDebugInfo={showDebugInfo}
                             apiKey={apiKey}
-                            aiModel={aiModel}
+                            novelAIApiKey={novelAIApiKey}
+                            aiModel={aiModel as any}
                             isWombGenerating={isGenerating}
                             getWombContext={buildWombContext}
                             onProcessingChange={setIsCordProcessing}

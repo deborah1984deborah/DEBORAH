@@ -2,8 +2,8 @@ import React from 'react';
 
 interface SettingsAiModelProps {
     lang: 'ja' | 'en';
-    aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
-    setAiModel: (model: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview') => void;
+    aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6';
+    setAiModel: (model: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6') => void;
     aiThinkingLevel: 'low' | 'medium' | 'high';
     onEditThinking: (e: React.MouseEvent) => void;
 }
@@ -38,7 +38,7 @@ export const SettingsAiModel: React.FC<SettingsAiModelProps> = ({
                 </svg>
                 <select
                     value={aiModel}
-                    onChange={(e) => setAiModel(e.target.value as 'gemini-2.5-flash' | 'gemini-3.1-pro-preview')}
+                    onChange={(e) => setAiModel(e.target.value as 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6')}
                     style={{
                         appearance: 'none',
                         backgroundColor: 'transparent',
@@ -53,6 +53,7 @@ export const SettingsAiModel: React.FC<SettingsAiModelProps> = ({
                 >
                     <option value="gemini-2.5-flash" style={{ backgroundColor: '#1A1A20', color: '#e2e8f0' }}>gemini-2.5-flash</option>
                     <option value="gemini-3.1-pro-preview" style={{ backgroundColor: '#1A1A20', color: '#e2e8f0' }}>gemini-3.1-pro-preview</option>
+                    <option value="glm-4-6" style={{ backgroundColor: '#1A1A20', color: '#e2e8f0' }}>novelai-glm-4.6</option>
                 </select>
                 {/* Custom Dropdown Arrow */}
                 <div style={{ pointerEvents: 'none', position: 'absolute', right: '0.5rem', color: '#38bdf8' }}>

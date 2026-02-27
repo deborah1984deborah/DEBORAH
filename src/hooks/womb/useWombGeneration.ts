@@ -4,7 +4,8 @@ import { Story, StoryLoreRelation, LoreItem, WombChatInteraction } from '../../t
 interface UseWombGenerationProps {
     lang: 'ja' | 'en';
     apiKey: string;
-    aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
+    novelAIApiKey: string;
+    aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6';
     content: string;
     setContent: (c: string) => void;
     currentStoryId: string | null;
@@ -25,7 +26,7 @@ interface UseWombGenerationProps {
 }
 
 export const useWombGeneration = ({
-    lang, apiKey, aiModel, content, setContent, currentStoryId, setCurrentStoryId,
+    lang, apiKey, novelAIApiKey, aiModel, content, setContent, currentStoryId, setCurrentStoryId,
     activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState,
     lastSavedContentRef, showWombDebugInfo, buildWombContext, aiThinkingLevel, wombChunkLimit, isCordActiveModeEnabled, wombOutputLength
 }: UseWombGenerationProps) => {
@@ -55,9 +56,7 @@ export const useWombGeneration = ({
         setIsGenerating(true);
 
         try {
-            const { callGeminiChat } = await import('../../utils/gemini');
-
-            // Call the shared context builder
+            // Call the correct API based on the model
             const { systemInstruction, dynamicStoryContext, matchedLoreItems } = await buildWombContext();
 
             // Construct Output Length Constraint
@@ -130,15 +129,34 @@ export const useWombGeneration = ({
                 content: payloadContent
             });
 
-            // Call the Gemeni API with Chat History and Thoughts extraction
-            const { text: generatedText, rawParts, thoughtSummary } = await callGeminiChat(
-                apiKey,
-                messages,
-                aiModel,
-                systemInstruction,
-                [{ googleSearch: {} }], // tools
-                aiThinkingLevel
-            );
+            // Call the correct API based on the model
+            let generatedText, rawParts, thoughtSummary;
+
+            if (aiModel === 'glm-4-6') {
+                const { callNovelAIChat } = await import('../../utils/novelai');
+                const result = await callNovelAIChat(
+                    novelAIApiKey,
+                    messages,
+                    aiModel,
+                    systemInstruction
+                );
+                generatedText = result.text;
+                rawParts = result.rawParts;
+                thoughtSummary = result.thoughtSummary;
+            } else {
+                const { callGeminiChat } = await import('../../utils/gemini');
+                const result = await callGeminiChat(
+                    apiKey,
+                    messages,
+                    aiModel,
+                    systemInstruction,
+                    [{ googleSearch: {} }], // tools
+                    aiThinkingLevel
+                );
+                generatedText = result.text;
+                rawParts = result.rawParts;
+                thoughtSummary = result.thoughtSummary;
+            }
 
             if (!generatedText) throw new Error("No text generated");
 
@@ -209,7 +227,7 @@ export const useWombGeneration = ({
             setIsGenerating(false);
         }
     }, [
-        apiKey, aiModel, content, currentStoryId,
+        apiKey, novelAIApiKey, aiModel, content, currentStoryId,
         activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, lang,
         lastSavedContentRef, showWombDebugInfo, buildWombContext, setCurrentStoryId, setContent, aiThinkingLevel, isCordActiveModeEnabled
     ]);

@@ -5,7 +5,7 @@ import { Story, StoryVersion, LoreItem, StoryEntityHistory } from '../../types';
 interface UseCordBackgroundHstProps {
     lang: 'ja' | 'en';
     apiKey: string;
-    aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview';
+    aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6';
     currentStoryId: string | null;
     savedStories: Story[];
     getActiveLineage: (currentVersionId: string | null, versions: any[]) => Set<string>;
@@ -224,7 +224,7 @@ Output strictly valid JSON in the following format. Nothing else.
 `;
             let selectedIds: string[] = [];
             try {
-                const selectionResponse = await callGemini(apiKey, selectionPrompt, aiModel);
+                const selectionResponse = await callGemini(apiKey, selectionPrompt, aiModel as any);
                 const cleanedResponse = selectionResponse.replace(/```json/g, '').replace(/```/g, '').trim();
                 const parsed = JSON.parse(cleanedResponse);
                 selectedIds = parsed.targetEntityIds || [];
@@ -279,7 +279,7 @@ Format:
 }
 `;
                 try {
-                    const updateResponse = await callGemini(apiKey, updatePrompt, aiModel);
+                    const updateResponse = await callGemini(apiKey, updatePrompt, aiModel as any);
                     const cRes = updateResponse.replace(/```json/g, '').replace(/```/g, '').trim();
                     const parsedUpdate = JSON.parse(cRes);
 
