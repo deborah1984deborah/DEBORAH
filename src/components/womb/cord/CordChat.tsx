@@ -89,9 +89,10 @@ export const CordChat: React.FC<CordChatProps> = ({
 
     useEffect(() => {
         if (onProcessingChange) {
-            onProcessingChange(isTyping);
+            // CORD is processing ONLY if it's typing AND WOMB is not currently generating
+            onProcessingChange(isTyping && !isWombGenerating);
         }
-    }, [isTyping, onProcessingChange]);
+    }, [isTyping, isWombGenerating, onProcessingChange]);
 
     useEffect(() => {
         if (onDebugDataChange) {
