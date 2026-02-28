@@ -228,18 +228,31 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
             // we manually append the tool descriptions and formatting rules into the system prompt.
             if (aiModel === 'glm-4-6') {
                 systemPrompt += `\n\n【重要: ツールの使用と出力フォーマットの厳守】
-あなたは現在の環境において、以下の1つのツールのみを使用することができます。
+あなたは現在の環境において、追加で以下の2つのツールを使用することができます。
+
 - 名前: "insert_womb_instruction"
 - 目的: WOMBのエディタの現在のカーソル位置に、指定したAIインストラクションを挿入します。ユーザーの代わりに指示を書き込む際に使用します。
 - 引数: "instruction_text" (文字列)
 
-ツールを使用する場合は、**必ず以下の厳密なフォーマットのみを出力し、必ず「===END_TOOL_CALL===」の閉じ文字まで完全に書き切ってから終了してください。**
-途中で出力を停止したり、JSONの構造を破壊したりすることはシステムエラーに直結するため絶対に避けてください。
-それ以外のテキスト（会話や前置き、言い訳など）は一切含めないでください。
+- 名前: "add_womb_history"
+- 目的: WOMB上の特定のキャラクター（Entity）の履歴に情報を追加します。
+- 引数:
+  - "entity_query" (文字列): 対象キャラクターの名前またはキーワード。
+  - "history_text" (文字列): 追加する履歴のテキスト。
 
-[正しい出力の例]
+ツールを使用する場合は、**完全に推論と文章の出力を完了したあと、発言の最後尾に**以下の厳密なフォーマットのみを出力し、「===END_TOOL_CALL===」の閉じ文字まで完全に書き切ってから終了してください。
+途中で出力を停止したり、JSONの構造を破壊したりすることはシステムエラーに直結するため絶対に避けてください。
+
+[正しい出力の例（insert_womb_instructionの場合）]
+わかりました！指示を挿入しますね。
 ===BEGIN_TOOL_CALL===
 {"name": "insert_womb_instruction", "args": {"instruction_text": "挿入したい指示文"}}
+===END_TOOL_CALL===
+
+[正しい出力の例（add_womb_historyの場合）]
+王様の履歴に追加しました！
+===BEGIN_TOOL_CALL===
+{"name": "add_womb_history", "args": {"entity_query": "王様", "history_text": "城の修繕を命じた"}}
 ===END_TOOL_CALL===
 `;
             }
@@ -413,7 +426,9 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                                         if (matchedById) {
                                             isResolved = true;
                                             targetEntityName = matchedById.name;
-                                            functionLogMsg = `[System] Success. History added to "${matchedById.name}" (ID: ${matchedById.id}).`;
+                                            functionLogMsg = sessionLang === 'ja'
+                                                ? `[System] Success. History added to "${matchedById.name}" (ID: ${matchedById.id}).\nシステム: ヒストリーへの追加が完了しました。これ以上のツールの呼び出しは不要です。「${matchedById.name}のヒストリーに追加しました」とテキスト出力してターンを終了してください。`
+                                                : `[System] Success. History added to "${matchedById.name}" (ID: ${matchedById.id}).\nSystem: History addition complete. No further tool calls are needed. Output a short confirmation text and end your turn.`;
                                         }
                                     }
 
@@ -430,7 +445,9 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                                             targetEntityId = matches[0].id;
                                             targetEntityName = matches[0].name;
                                             isResolved = true;
-                                            functionLogMsg = `[System] Success. History added to "${matches[0].name}" (ID: ${matches[0].id}).`;
+                                            functionLogMsg = sessionLang === 'ja'
+                                                ? `[System] Success. History added to "${matches[0].name}" (ID: ${matches[0].id}).\nシステム: ヒストリーへの追加が完了しました。これ以上のツールの呼び出しは不要です。「${matches[0].name}のヒストリーに追加しました」とテキスト出力してターンを終了してください。`
+                                                : `[System] Success. History added to "${matches[0].name}" (ID: ${matches[0].id}).\nSystem: History addition complete. No further tool calls are needed. Output a short confirmation text and end your turn.`;
                                         } else if (matches.length > 1) {
                                             const candidatesStr = matches.map((m: any) => `- ID: ${m.id}, Name: ${m.name}`).join('\n');
                                             functionLogMsg = `[System] Error: Ambiguous target. Multiple characters match the query "${entityQuery}".\nCandidates:\n${candidatesStr}\n\nPlease ask the user to clarify which ID they meant.`;
@@ -448,7 +465,9 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                                 if (explicitlyProvidedId) {
                                     targetEntityId = explicitlyProvidedId;
                                     isResolved = true;
-                                    functionLogMsg = `[System] Success. Executed with provided ID.`;
+                                    functionLogMsg = sessionLang === 'ja'
+                                        ? `[System] Success. Executed with provided ID.\nシステム: ヒストリーへの追加が完了しました。これ以上のツールの呼び出しは不要です。完了した旨をテキスト出力してターンを終了してください。`
+                                        : `[System] Success. Executed with provided ID.\nSystem: History addition complete. No further tool calls are needed. Output a short confirmation text and end your turn.`;
                                 }
                             }
 
