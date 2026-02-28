@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Story, StoryLoreRelation, LoreItem, WombChatInteraction } from '../../types';
 
 interface UseWombGenerationProps {
@@ -38,9 +38,28 @@ export const useWombGeneration = ({
     const [debugInputText, setDebugInputText] = useState<string>('');
     const [debugMatchedEntities, setDebugMatchedEntities] = useState<LoreItem[]>([]);
 
+    // Refs to combat stale closures during long-running generation tasks (e.g. from CORD)
+    const contentRef = useRef(content);
+    const storyIdRef = useRef(currentStoryId);
+    const mommyIdsRef = useRef(activeMommyIds);
+    const nerdIdsRef = useRef(activeNerdIds);
+    const loreIdsRef = useRef(activeLoreIds);
+
+    useEffect(() => { contentRef.current = content; }, [content]);
+    useEffect(() => { storyIdRef.current = currentStoryId; }, [currentStoryId]);
+    useEffect(() => { mommyIdsRef.current = activeMommyIds; }, [activeMommyIds]);
+    useEffect(() => { nerdIdsRef.current = activeNerdIds; }, [activeNerdIds]);
+    useEffect(() => { loreIdsRef.current = activeLoreIds; }, [activeLoreIds]);
+
     // Action: Save System (Generate Story)
     const handleSave = useCallback(async (blueprintOverride?: string | React.MouseEvent | Event) => {
-        if (!content.trim()) return;
+        const freshContent = contentRef.current;
+        let freshStoryId = storyIdRef.current;
+        const freshMommyIds = mommyIdsRef.current;
+        const freshNerdIds = nerdIdsRef.current;
+        const freshLoreIds = loreIdsRef.current;
+
+        if (!freshContent.trim()) return;
 
         // --- CORD Event Dispatch Flow ---
         // If Active CORD is enabled, and we didn't explicitly pass a text blueprint,
@@ -81,21 +100,22 @@ export const useWombGeneration = ({
                 setDebugMatchedEntities(matchedLoreItems);
             }
 
-            let newId = currentStoryId;
+            let newId = freshStoryId;
             if (!newId) {
                 newId = Date.now().toString();
                 setCurrentStoryId(newId);
+                storyIdRef.current = newId; // Update ref immediately for subsequent calls
             }
 
             // Save PRE-GEN if content changed
-            if (content !== lastSavedContentRef.current) {
+            if (freshContent !== lastSavedContentRef.current) {
                 saveGlobalStoryState(
                     newId,
-                    content,
+                    freshContent,
                     'generate_pre',
-                    activeMommyIds,
-                    activeNerdIds,
-                    activeLoreIds
+                    freshMommyIds,
+                    freshNerdIds,
+                    freshLoreIds
                 );
             }
 
@@ -207,17 +227,18 @@ export const useWombGeneration = ({
             }
 
             // Append generated text (using the cleaned version for the editor)
-            const newContent = content + cleanGeneratedText;
+            const newContent = freshContent + cleanGeneratedText;
             setContent(newContent);
+            contentRef.current = newContent; // Update ref immediately
 
             // Save POST-GEN via helper
             saveGlobalStoryState(
                 newId,
                 newContent,
                 'generate_post',
-                activeMommyIds,
-                activeNerdIds,
-                activeLoreIds
+                freshMommyIds,
+                freshNerdIds,
+                freshLoreIds
             );
 
         } catch (error) {
@@ -227,9 +248,8 @@ export const useWombGeneration = ({
             setIsGenerating(false);
         }
     }, [
-        apiKey, novelAIApiKey, aiModel, content, currentStoryId,
-        activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState, lang,
-        lastSavedContentRef, showWombDebugInfo, buildWombContext, setCurrentStoryId, setContent, aiThinkingLevel, isCordActiveModeEnabled
+        apiKey, novelAIApiKey, aiModel, saveGlobalStoryState, lang,
+        lastSavedContentRef, showWombDebugInfo, buildWombContext, setCurrentStoryId, setContent, aiThinkingLevel, isCordActiveModeEnabled, wombOutputLength
     ]);
 
     const handleCutContext = useCallback(() => {

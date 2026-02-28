@@ -198,6 +198,8 @@ export const useWombStory = ({
             activeNerdIds,
             activeLoreIds
         );
+
+        return targetStoryId;
     }, [content, currentStoryId, activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState]);
 
     // Helper: Clean up state when transitioning to a fresh story
