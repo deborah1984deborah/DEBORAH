@@ -185,7 +185,98 @@ export const CordChatMessage: React.FC<CordChatMessageProps> = ({
                                     <span>{lang === 'ja' ? 'システムからの自動リクエスト' : 'Auto System Request'}</span>
                                 </div>
                             )}
-                            {msg.content}
+
+                            {/* --- Split and render tool calls inline --- */}
+                            {(() => {
+                                const TOOL_START_TAG = "===BEGIN_TOOL_CALL===";
+                                const TOOL_END_TAG = "===END_TOOL_CALL===";
+
+                                if (msg.role === 'ai' && msg.content && msg.content.includes(TOOL_START_TAG) && msg.content.includes(TOOL_END_TAG)) {
+                                    // Split the text into parts (before tool, the tool, after tool)
+                                    // We'll use a simple regex to capture the blocks
+                                    const regex = /===BEGIN_TOOL_CALL===([\s\S]*?)===END_TOOL_CALL===/g;
+                                    const parts = [];
+                                    let lastIndex = 0;
+                                    let match;
+
+                                    while ((match = regex.exec(msg.content)) !== null) {
+                                        // Text before the tool
+                                        if (match.index > lastIndex) {
+                                            const preText = msg.content.substring(lastIndex, match.index).trim();
+                                            if (preText) {
+                                                parts.push(<span key={`text-${lastIndex}`}>{preText}{'\n\n'}</span>);
+                                            }
+                                        }
+
+                                        // The tool json block
+                                        const jsonStr = match[1].replace(/^```json/g, "").replace(/^```/g, "").replace(/```$/g, "").trim();
+                                        try {
+                                            const parsedTool = JSON.parse(jsonStr.replace(/\n/g, "\\n").replace(/\r/g, "\\r"));
+                                            if (parsedTool.name) {
+                                                parts.push(
+                                                    <details key={`tool-${match.index}`} style={{
+                                                        marginTop: '0.8rem',
+                                                        marginBottom: '0.8rem',
+                                                        fontSize: '0.85rem',
+                                                        color: 'rgba(255,255,255,0.8)',
+                                                        backgroundColor: 'rgba(0,0,0,0.3)',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid rgba(255,255,255,0.1)',
+                                                        overflow: 'hidden'
+                                                    }}>
+                                                        <summary style={{
+                                                            outline: 'none',
+                                                            userSelect: 'none',
+                                                            fontWeight: 'bold',
+                                                            padding: '0.6rem 0.8rem',
+                                                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.5rem',
+                                                            color: '#bae6fd'
+                                                        }}>
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                                                            </svg>
+                                                            {lang === 'ja' ? `ツールを使用しました: ${parsedTool.name}` : `Used Tool: ${parsedTool.name}`}
+                                                        </summary>
+                                                        <pre style={{
+                                                            margin: 0,
+                                                            whiteSpace: 'pre-wrap',
+                                                            wordBreak: 'break-word',
+                                                            padding: '0.8rem',
+                                                            fontFamily: 'monospace',
+                                                            fontSize: '0.75rem',
+                                                            color: '#94a3b8'
+                                                        }}>
+                                                            {JSON.stringify(parsedTool.args, null, 2)}
+                                                        </pre>
+                                                    </details>
+                                                );
+                                            }
+                                        } catch (e) {
+                                            // Fallback if JSON parse fails inside UI (should never happen)
+                                            parts.push(<span key={`fail-${match.index}`}>{match[0]}{'\n\n'}</span>);
+                                        }
+
+                                        lastIndex = regex.lastIndex;
+                                    }
+
+                                    // Text after the last tool
+                                    if (lastIndex < msg.content.length) {
+                                        const postText = msg.content.substring(lastIndex).trim();
+                                        if (postText) {
+                                            parts.push(<span key={`text-${lastIndex}`}>{postText}</span>);
+                                        }
+                                    }
+
+                                    return parts.length > 0 ? parts : msg.content;
+                                }
+
+                                // Fallback for normal messages or when regex fails
+                                return msg.content;
+                            })()}
                         </div>
                     </div>
                 )}

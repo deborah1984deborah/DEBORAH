@@ -224,6 +224,26 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                 }]
             }]; // Notice: googleSearch is deliberately omitted to prevent API 400 errors
 
+            // [HACK] For GLM-4 model which ignores tool definitions in the system param,
+            // we manually append the tool descriptions and formatting rules into the system prompt.
+            if (aiModel === 'glm-4-6') {
+                systemPrompt += `\n\n【重要: ツールの使用と出力フォーマットの厳守】
+あなたは現在の環境において、以下の1つのツールのみを使用することができます。
+- 名前: "insert_womb_instruction"
+- 目的: WOMBのエディタの現在のカーソル位置に、指定したAIインストラクションを挿入します。ユーザーの代わりに指示を書き込む際に使用します。
+- 引数: "instruction_text" (文字列)
+
+ツールを使用する場合は、**必ず以下の厳密なフォーマットのみを出力し、必ず「===END_TOOL_CALL===」の閉じ文字まで完全に書き切ってから終了してください。**
+途中で出力を停止したり、JSONの構造を破壊したりすることはシステムエラーに直結するため絶対に避けてください。
+それ以外のテキスト（会話や前置き、言い訳など）は一切含めないでください。
+
+[正しい出力の例]
+===BEGIN_TOOL_CALL===
+{"name": "insert_womb_instruction", "args": {"instruction_text": "挿入したい指示文"}}
+===END_TOOL_CALL===
+`;
+            }
+
             // Update Debug State visually
             let lastUserInput = "";
             for (let i = apiMessages.length - 1; i >= 0; i--) {
@@ -260,11 +280,13 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                         setStreamingThought('');
                     }
 
+                    let abortController: AbortController | undefined;
                     let stream;
                     if (aiModel === 'glm-4-6') {
                         const { callNovelAIChatStream } = await import('../../utils/novelai');
+                        abortController = new AbortController();
                         // tools are ignored in NovelAI for now
-                        stream = callNovelAIChatStream(novelAIApiKey, currentApiMessages as any, aiModel, systemPrompt);
+                        stream = callNovelAIChatStream(novelAIApiKey, currentApiMessages as any, aiModel, systemPrompt, abortController.signal);
                     } else {
                         stream = callGeminiChatStream(apiKey, currentApiMessages as any, aiModel as any, systemPrompt, cordTools);
                     }
@@ -274,6 +296,12 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                             accumulatedText += chunk.textChunk;
                             // Remove leading newlines/spaces that some models (like GLM) might return
                             setStreamingText(accumulatedText.trimStart());
+
+                            // Abort streaming early if tool call block is finished
+                            if (aiModel === 'glm-4-6' && accumulatedText.includes("===END_TOOL_CALL===")) {
+                                if (abortController) abortController.abort();
+                                break;
+                            }
                         }
                         if (chunk.thoughtChunk) {
                             accumulatedThought += chunk.thoughtChunk;
@@ -287,18 +315,57 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                         }
                     }
 
+                    // --- Post-Streaming Async Tool Parsing (Fallback logic specifically for models without native tool call like NovelAI) ---
+                    let isAsyncParsedTool = false; // Flag to stop recursive loops
+                    if (!finalFunctionCall && accumulatedText) {
+                        const TOOL_START_TAG = "===BEGIN_TOOL_CALL===";
+                        const TOOL_END_TAG = "===END_TOOL_CALL===";
+                        if (accumulatedText.includes(TOOL_START_TAG) && accumulatedText.includes(TOOL_END_TAG)) {
+                            try {
+                                const startIdx = accumulatedText.indexOf(TOOL_START_TAG) + TOOL_START_TAG.length;
+                                const endIdx = accumulatedText.indexOf(TOOL_END_TAG, startIdx);
+                                if (endIdx !== -1) {
+                                    let jsonStr = accumulatedText.substring(startIdx, endIdx).trim();
+                                    jsonStr = jsonStr.replace(/\n/g, "\\n").replace(/\r/g, "\\r");
+                                    jsonStr = jsonStr.replace(/^```json/g, "").replace(/^```/g, "").replace(/```$/g, "").trim();
+
+                                    const parsedToolCall = JSON.parse(jsonStr);
+                                    if (parsedToolCall.name) {
+                                        finalFunctionCall = parsedToolCall;
+                                        isAsyncParsedTool = true;
+                                        console.log("[Async Tool Parser] Successfully extracted tool call from text:", finalFunctionCall);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error("[Async Tool Parser Error]", e, "Could not parse JSON block from text.");
+                            }
+                        }
+                    }
+                    // ----------------------------------------------------------------------------------------------------------
+
                     if (finalFunctionCall) {
                         // Function Call Received
                         let functionLogMsg = '';
                         let uiDisplayMsg = '';
 
+                        // Extract any conversational text the AI generated *before* the tool block
+                        let textBeforeTool = "";
+                        if (isAsyncParsedTool && accumulatedText) {
+                            const startIdx = accumulatedText.indexOf("===BEGIN_TOOL_CALL===");
+                            if (startIdx > 0) {
+                                textBeforeTool = accumulatedText.substring(0, startIdx).trim();
+                            }
+                        }
+
                         // Visually add the AI's internal decision to the chat
-                        addMessage('ai', '', sessionId, finalFunctionCall, finalRawParts, accumulatedThought || undefined);
+                        // If there is text before the tool, show it. Otherwise, it's just a tool call.
+                        addMessage('ai', textBeforeTool, sessionId, finalFunctionCall, finalRawParts, accumulatedThought || undefined);
 
                         // Clear streaming state during background execution to prevent UI duplicate thoughts
                         setIsStreaming(false);
                         setStreamingText('');
                         setStreamingThought('');
+
 
                         if (finalFunctionCall.name === 'search_web') {
                             const args = finalFunctionCall.args;
@@ -430,9 +497,10 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                         // Prepare function response and update message history for the next loop
                         const funcCallMsg: ChatMessageData = {
                             role: 'ai',
-                            content: '',
+                            // For GLM-4, store ONLY the conversational part of the text so the system remembers the AI spoke
+                            content: textBeforeTool,
                             functionCall: finalFunctionCall,
-                            rawParts: finalRawParts
+                            rawParts: isAsyncParsedTool ? [{ text: textBeforeTool }] : finalRawParts
                         };
                         const funcResMsg: ChatMessageData = {
                             role: 'function',

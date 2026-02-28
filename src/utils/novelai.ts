@@ -92,7 +92,8 @@ export const callNovelAIChatStream = async function* (
     apiKey: string,
     messages: ChatMessageData[],
     model: string = 'glm-4-6',
-    systemInstruction?: string
+    systemInstruction?: string,
+    signal?: AbortSignal
 ): AsyncGenerator<StreamChunk, void, unknown> {
     if (!apiKey) throw new Error('NovelAI Access Token is missing');
 
@@ -102,8 +103,13 @@ export const callNovelAIChatStream = async function* (
     }
 
     for (const msg of messages) {
-        if (msg.role === 'function') continue;
-        if (msg.role === 'system') continue;
+        if (msg.role === 'function' || msg.role === 'system') {
+            oaiMessages.push({
+                role: 'user',
+                content: `[System Notification]\n${msg.content}`
+            });
+            continue;
+        }
 
         oaiMessages.push({
             role: msg.role === 'ai' ? 'assistant' : msg.role,
@@ -125,7 +131,8 @@ export const callNovelAIChatStream = async function* (
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal
     });
 
     if (!response.ok) {
@@ -135,37 +142,45 @@ export const callNovelAIChatStream = async function* (
 
     if (!response.body) throw new Error("No response body available for streaming");
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let buffer = "";
+    try {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
 
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        let lines = buffer.split('\n');
-        buffer = lines.pop() || "";
+            buffer += decoder.decode(value, { stream: true });
+            let lines = buffer.split('\n');
+            buffer = lines.pop() || "";
 
-        for (const line of lines) {
-            if (line.startsWith('data: ')) {
-                const dataStr = line.slice(6).trim();
-                if (dataStr === '[DONE]') continue;
-                if (!dataStr) continue;
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.slice(6).trim();
+                    if (dataStr === '[DONE]') continue;
+                    if (!dataStr) continue;
 
-                try {
-                    const data = JSON.parse(dataStr);
-                    const chunkText = data.choices?.[0]?.delta?.content || "";
-                    if (chunkText) {
-                        yield {
-                            textChunk: chunkText,
-                            isDone: false
-                        };
+                    try {
+                        const data = JSON.parse(dataStr);
+                        const chunkText = data.choices?.[0]?.delta?.content || "";
+                        if (chunkText) {
+                            yield {
+                                textChunk: chunkText,
+                                isDone: false
+                            };
+                        }
+                    } catch (e) {
+                        // Ignore JSON parsing errors for partial chunks
                     }
-                } catch (e) {
-                    // Ignore JSON parsing errors for partial chunks
                 }
             }
+        }
+    } catch (e: any) {
+        if (e.name === 'AbortError') {
+            console.log("NovelAI Stream aborted early by client.");
+        } else {
+            throw e;
         }
     }
 
