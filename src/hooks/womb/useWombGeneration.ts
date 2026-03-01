@@ -23,12 +23,13 @@ interface UseWombGenerationProps {
     isCordActiveModeEnabled: boolean;
     buildWombContext: () => Promise<any>;
     wombOutputLength: number;
+    isPseudoThinkingModeEnabled: boolean;
 }
 
 export const useWombGeneration = ({
     lang, apiKey, novelAIApiKey, aiModel, content, setContent, currentStoryId, setCurrentStoryId,
     activeMommyIds, activeNerdIds, activeLoreIds, saveGlobalStoryState,
-    lastSavedContentRef, showWombDebugInfo, buildWombContext, aiThinkingLevel, wombChunkLimit, isCordActiveModeEnabled, wombOutputLength
+    lastSavedContentRef, showWombDebugInfo, buildWombContext, aiThinkingLevel, wombChunkLimit, isCordActiveModeEnabled, wombOutputLength, isPseudoThinkingModeEnabled
 }: UseWombGenerationProps) => {
 
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -154,15 +155,71 @@ export const useWombGeneration = ({
 
             if (aiModel === 'glm-4-6') {
                 const { callNovelAIChat } = await import('../../utils/novelai');
-                const result = await callNovelAIChat(
-                    novelAIApiKey,
-                    messages,
-                    aiModel,
-                    systemInstruction
-                );
-                generatedText = result.text;
-                rawParts = result.rawParts;
-                thoughtSummary = result.thoughtSummary;
+
+                if (isPseudoThinkingModeEnabled) {
+                    console.log("[WOMB] ✨ Pseudo-Thinking Mode: PHASE 1 (Thinking) Started.");
+                    // --- PHASE 1: Thinking ---
+                    const phase1Instruction = lang === 'ja'
+                        ? `\n\n【指示】\n物語の続きを生成する前に、プロットや展開方向、キャラクターの心情変化について段階的かつ論理的に思考してください。思考プロセスを出力し、思考が完了したら最後に「[THINKING_COMPLETE]」と出力してください。`
+                        : `\n\n[Instruction]\nBefore generating the continuation of the story, please think step-by-step logically about the plot, development direction, and character emotional changes. Output your thought process, and once your thinking is complete, output "[THINKING_COMPLETE]" at the end.`;
+
+                    // Create a copy of messages for Phase 1
+                    const phase1Messages = [...messages];
+                    // Append instruction to the very last user message
+                    const lastUserMsg = phase1Messages[phase1Messages.length - 1];
+                    phase1Messages[phase1Messages.length - 1] = {
+                        ...lastUserMsg,
+                        content: lastUserMsg.content + phase1Instruction
+                    };
+
+                    const phase1Result = await callNovelAIChat(
+                        novelAIApiKey,
+                        phase1Messages,
+                        aiModel,
+                        systemInstruction
+                    );
+
+                    let activePseudoThought = phase1Result.text || "";
+
+                    // Cleanup flag if it appended it
+                    if (activePseudoThought.includes('[THINKING_COMPLETE]')) {
+                        activePseudoThought = activePseudoThought.replace(/\[THINKING_COMPLETE\]/g, '').trim();
+                    }
+
+                    console.log("[WOMB] ✨ Pseudo-Thinking Mode: PHASE 1 Complete. Transitioning to PHASE 2 (Response).");
+                    console.log("[WOMB] Intercepted Thought:", activePseudoThought);
+
+                    // --- PHASE 2: Generating ---
+                    const phase2Instruction = lang === 'ja'
+                        ? `思考完了ですね。それでは思考した内容をベースに、物語の本文の続きを出力してください。`
+                        : `Thinking is complete. Now, based on your thoughts, please output the continuation of the story.`;
+
+                    // Append the AI's thought and the new user prompt
+                    messages.push({ role: 'ai', content: activePseudoThought });
+                    messages.push({ role: 'user', content: phase2Instruction });
+
+                    const phase2Result = await callNovelAIChat(
+                        novelAIApiKey,
+                        messages, // Send updated array
+                        aiModel,
+                        systemInstruction
+                    );
+
+                    generatedText = phase2Result.text;
+                    rawParts = phase2Result.rawParts;
+                    thoughtSummary = activePseudoThought; // Set the intercepted thought as the summary to store
+                } else {
+                    // Standard GLM operation
+                    const result = await callNovelAIChat(
+                        novelAIApiKey,
+                        messages,
+                        aiModel,
+                        systemInstruction
+                    );
+                    generatedText = result.text;
+                    rawParts = result.rawParts;
+                    thoughtSummary = result.thoughtSummary;
+                }
             } else {
                 const { callGeminiChat } = await import('../../utils/gemini');
                 const result = await callGeminiChat(
