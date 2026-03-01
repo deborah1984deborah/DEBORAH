@@ -18,6 +18,7 @@ interface UseCordGenerationProps {
     triggerAutoHistory?: () => void;
     triggerWombGeneration?: (blueprintOverride?: string) => Promise<void>;
     cordOutputLength: number;
+    checkIsBackgroundProcessing?: () => boolean;
 }
 
 export const useCordGeneration = ({
@@ -31,7 +32,8 @@ export const useCordGeneration = ({
     saveSessionsToStorage,
     triggerAutoHistory,
     triggerWombGeneration,
-    cordOutputLength
+    cordOutputLength,
+    checkIsBackgroundProcessing
 }: UseCordGenerationProps) => {
     const [isTyping, setIsTyping] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
@@ -518,6 +520,20 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
 
                                     await triggerWombGeneration(blueprintText);
 
+                                    // Wait for Auto-History to finish if it got triggered by the generation save process
+                                    if (checkIsBackgroundProcessing) {
+                                        // Give the WOMB save process a tiny head start to sync state (evaluateBackgroundTrigger)
+                                        await new Promise(resolve => setTimeout(resolve, 500));
+
+                                        if (checkIsBackgroundProcessing()) {
+                                            console.log("[CORD] Waiting for background auto-history extraction to complete...");
+                                            addMessage('system', sessionLang === 'ja' ? "背景での自動ヒストリー抽出の完了を待機しています..." : "Waiting for background auto-history extraction...", sessionId);
+                                            while (checkIsBackgroundProcessing()) {
+                                                await new Promise(resolve => setTimeout(resolve, 1500));
+                                            }
+                                        }
+                                    }
+
                                     functionLogMsg = sessionLang === 'ja'
                                         ? "システム: WOMBでの本文生成が完了しました。これ以上の操作は不要です。「生成が完了しました」等の短いテキストを返答してターンを終了してください。"
                                         : "System: WOMB generation has completed. No further tool calls are needed. Output a short confirmation text and end your turn.";
@@ -525,6 +541,20 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                                 } else {
                                     // Gemini specific: Fire and forget
                                     triggerWombGeneration(blueprintText);
+
+                                    // Wait for Auto-History to finish if it got triggered by the generation save process
+                                    if (checkIsBackgroundProcessing) {
+                                        // Give the WOMB save process a tiny head start to sync state (evaluateBackgroundTrigger)
+                                        await new Promise(resolve => setTimeout(resolve, 500));
+
+                                        if (checkIsBackgroundProcessing()) {
+                                            console.log("[CORD] Waiting for background auto-history extraction to complete...");
+                                            addMessage('system', sessionLang === 'ja' ? "背景での自動ヒストリー抽出の完了を待機しています..." : "Waiting for background auto-history extraction...", sessionId);
+                                            while (checkIsBackgroundProcessing()) {
+                                                await new Promise(resolve => setTimeout(resolve, 1500));
+                                            }
+                                        }
+                                    }
 
                                     functionLogMsg = sessionLang === 'ja'
                                         ? "システム: Narrative Blueprintを作成し、WOMBに送信しました。これ以上のツール呼び出しは不要です。「WOMBにて生成を開始しました」とテキスト出力してターンを終了してください。"

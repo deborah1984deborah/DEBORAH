@@ -9,7 +9,8 @@ export const useCordChat = (
     lang: 'ja' | 'en' = 'ja',
     triggerAutoHistory?: () => void,
     triggerWombGeneration?: () => Promise<void>,
-    cordOutputLength: number = 400
+    cordOutputLength: number = 400,
+    checkIsBackgroundProcessing?: () => boolean
 ) => {
     // 1. Session & Storage Management
     const session = useCordSession(currentStoryId, content, triggerSave, lang);
@@ -33,7 +34,8 @@ export const useCordChat = (
         saveSessionsToStorage: session.saveSessionsToStorage,
         triggerAutoHistory,
         triggerWombGeneration,
-        cordOutputLength
+        cordOutputLength,
+        checkIsBackgroundProcessing
     });
 
     return {

@@ -35,6 +35,14 @@ export const CordChat: React.FC<CordChatProps> = ({
     triggerAutoHistory, triggerWombGeneration, isWombGenerating = false,
     cordOutputLength
 }) => {
+    // Ref to track latest background processing state for async polling in CORD's AI loop
+    const isBackgroundProcessingRef = useRef(isBackgroundProcessing);
+    useEffect(() => {
+        isBackgroundProcessingRef.current = isBackgroundProcessing;
+    }, [isBackgroundProcessing]);
+
+    const checkIsBackgroundProcessing = () => isBackgroundProcessingRef.current;
+
     // Integrate Custom Hook
     const {
         sessions,
@@ -59,7 +67,7 @@ export const CordChat: React.FC<CordChatProps> = ({
         cordDebugSystemPrompt,
         cordDebugInputText,
         cordDebugMatchedEntities
-    } = useCordChat(currentStoryId, content, triggerSave, lang, triggerAutoHistory, triggerWombGeneration, cordOutputLength);
+    } = useCordChat(currentStoryId, content, triggerSave, lang, triggerAutoHistory, triggerWombGeneration, cordOutputLength, checkIsBackgroundProcessing);
 
     const [inputValue, setInputValue] = useState('');
     const [showHistory, setShowHistory] = useState(false); // Modal State
