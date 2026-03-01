@@ -5,6 +5,8 @@ interface SettingsAiModelProps {
     aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6';
     setAiModel: (model: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6') => void;
     aiThinkingLevel: 'low' | 'medium' | 'high';
+    isPseudoThinkingModeEnabled: boolean;
+    setIsPseudoThinkingModeEnabled: (enabled: boolean) => void;
     onEditThinking: (e: React.MouseEvent) => void;
 }
 
@@ -13,6 +15,8 @@ export const SettingsAiModel: React.FC<SettingsAiModelProps> = ({
     aiModel,
     setAiModel,
     aiThinkingLevel,
+    isPseudoThinkingModeEnabled,
+    setIsPseudoThinkingModeEnabled,
     onEditThinking
 }) => {
     return (
@@ -62,25 +66,51 @@ export const SettingsAiModel: React.FC<SettingsAiModelProps> = ({
                     </svg>
                 </div>
             </div>
-            {/* Thinking Level Edit Button */}
+            {/* Conditional Bottom Row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '4px' }}>
-                    Thinking: <span style={{ color: '#fbbf24' }}>{aiThinkingLevel.charAt(0).toUpperCase() + aiThinkingLevel.slice(1)}</span>
-                </span>
-                <button
-                    onClick={onEditThinking}
-                    style={{
-                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                        border: '1px solid rgba(56, 189, 248, 0.3)',
-                        borderRadius: '4px',
-                        color: '#38bdf8',
-                        padding: '0.2rem 0.6rem',
-                        fontSize: '0.75rem',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Edit
-                </button>
+                {aiModel === 'gemini-3.1-pro-preview' && (
+                    <>
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '4px' }}>
+                            Thinking: <span style={{ color: '#fbbf24' }}>{aiThinkingLevel.charAt(0).toUpperCase() + aiThinkingLevel.slice(1)}</span>
+                        </span>
+                        <button
+                            onClick={onEditThinking}
+                            style={{
+                                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                                border: '1px solid rgba(56, 189, 248, 0.3)',
+                                borderRadius: '4px',
+                                color: '#38bdf8',
+                                padding: '0.2rem 0.6rem',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Edit
+                        </button>
+                    </>
+                )}
+                {aiModel === 'glm-4-6' && (
+                    <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        color: '#e2e8f0',
+                        marginLeft: '4px'
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={isPseudoThinkingModeEnabled}
+                            onChange={(e) => setIsPseudoThinkingModeEnabled(e.target.checked)}
+                            style={{
+                                cursor: 'pointer',
+                                accentColor: '#38bdf8'
+                            }}
+                        />
+                        {lang === 'ja' ? '疑似思考モード' : 'Pseudo-Thinking Mode'}
+                    </label>
+                )}
             </div>
         </div>
     );

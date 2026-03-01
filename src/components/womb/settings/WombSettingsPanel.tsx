@@ -39,6 +39,8 @@ interface WombSettingsPanelProps {
     setAiModel: (model: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6') => void;
     aiThinkingLevel: 'low' | 'medium' | 'high';
     setAiThinkingLevel: (level: 'low' | 'medium' | 'high') => void;
+    isPseudoThinkingModeEnabled: boolean;
+    setIsPseudoThinkingModeEnabled: (enabled: boolean) => void;
     anchorRef: React.RefObject<HTMLButtonElement>;
 }
 
@@ -71,6 +73,8 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
     setAiModel,
     aiThinkingLevel,
     setAiThinkingLevel,
+    isPseudoThinkingModeEnabled,
+    setIsPseudoThinkingModeEnabled,
     anchorRef
 }) => {
     const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -157,6 +161,8 @@ export const WombSettingsPanel: React.FC<WombSettingsPanelProps> = ({
                     aiModel={aiModel}
                     setAiModel={setAiModel}
                     aiThinkingLevel={aiThinkingLevel}
+                    isPseudoThinkingModeEnabled={isPseudoThinkingModeEnabled}
+                    setIsPseudoThinkingModeEnabled={setIsPseudoThinkingModeEnabled}
                     onEditThinking={(e) => { e.stopPropagation(); setIsThinkingModalOpen(true); }}
                 />
 

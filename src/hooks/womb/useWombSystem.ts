@@ -15,6 +15,14 @@ interface UseWombSystemProps {
 export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     // UI State that doesn't fit specific domains
     const [showLorebook, setShowLorebook] = useState<boolean>(false);
+    const [isPseudoThinkingModeEnabled, setIsPseudoThinkingModeEnabled] = useState<boolean>(
+        localStorage.getItem('womb_pseudo_thinking') === 'true'
+    );
+
+    const handleSetPseudoThinkingMode = useCallback((enabled: boolean) => {
+        setIsPseudoThinkingModeEnabled(enabled);
+        localStorage.setItem('womb_pseudo_thinking', enabled.toString());
+    }, []);
 
     // 1. Settings
     const settings = useWombSettings();
@@ -270,6 +278,9 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         handleDelete: story.handleDeleteStory,
         showLorebook,
         setShowLorebook,
+
+        isPseudoThinkingModeEnabled,
+        setIsPseudoThinkingModeEnabled: handleSetPseudoThinkingMode,
 
         // Debug
         debugSystemPrompt,

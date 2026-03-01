@@ -202,7 +202,7 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
                 }, {
                     name: "trigger_auto_history",
                     description: sessionLang === 'ja'
-                        ? "ユーザーから「今の本文からヒストリーを抽出して」「最新の流れを更新して」のように自動抽出を依頼された場合に使用します。内部で本文の差分解析プロセスを強制起動し、対象キャラクターのHistoryを自動更新させます。"
+                        ? "ユーザーから「今の本文からヒストリーを抽出して」「ヒストリーに最新の流れを反映して」のように自動抽出を依頼された場合に使用します。内部で本文の差分解析プロセスを強制起動し、対象キャラクターのHistoryを自動更新させます。"
                         : "Use this when the user requests to automatically extract or record history from the current text. It manually triggers the background diff-analysis process to update character histories.",
                     parameters: {
                         type: "OBJECT",
@@ -242,6 +242,10 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
   - "entity_query" (文字列): 対象キャラクターの名前またはキーワード。
   - "history_text" (文字列): 追加する履歴のテキスト。
 
+- 名前: "trigger_auto_history"
+- 目的: ユーザーから「今の本文からヒストリーを抽出して」「ヒストリーに最新の流れを反映して」のように自動抽出を依頼された場合に使用します。これを呼び出すと内部で本文の差分解析プロセスが起動し、キャラクターのHistoryが自動更新されます。
+- 引数: なし
+
 - 名前: "trigger_womb_generation"
 - 目的: WOMB(執筆AI)による本文の自動生成を依頼された場合に使用します。これを呼び出すことで、あなたが作成した分析・展開指示(Narrative Blueprint)に基づいてWOMBが小説の続きを執筆します。
 - 引数:
@@ -260,6 +264,12 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
 王様の履歴に追加しました！
 ===BEGIN_TOOL_CALL===
 {"name": "add_womb_history", "args": {"entity_query": "王様", "history_text": "城の修繕を命じた"}}
+===END_TOOL_CALL===
+
+[正しい出力の例（trigger_auto_historyの場合）]
+自動でヒストリーを抽出しますね！
+===BEGIN_TOOL_CALL===
+{"name": "trigger_auto_history", "args": {}}
 ===END_TOOL_CALL===
 
 [正しい出力の例（trigger_womb_generationの場合）]

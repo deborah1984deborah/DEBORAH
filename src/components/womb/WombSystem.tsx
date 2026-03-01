@@ -40,6 +40,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         novelAIApiKey, setNovelAIApiKey,
         aiModel, setAiModel,
         aiThinkingLevel, setAiThinkingLevel,
+        isPseudoThinkingModeEnabled, setIsPseudoThinkingModeEnabled,
         isGenerating,
         currentStoryId,
         content, setContent,
@@ -305,6 +306,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                                 setAiModel={setAiModel}
                                 aiThinkingLevel={aiThinkingLevel}
                                 setAiThinkingLevel={setAiThinkingLevel}
+                                isPseudoThinkingModeEnabled={isPseudoThinkingModeEnabled}
+                                setIsPseudoThinkingModeEnabled={setIsPseudoThinkingModeEnabled}
                                 anchorRef={settingsBtnRef}
                             />
                         </div>
