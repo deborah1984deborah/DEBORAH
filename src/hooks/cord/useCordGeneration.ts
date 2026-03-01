@@ -230,7 +230,7 @@ When auto-generation is requested, you MUST create a Narrative Blueprint that me
             // we manually append the tool descriptions and formatting rules into the system prompt.
             if (aiModel === 'glm-4-6') {
                 systemPrompt += `\n\n【重要: ツールの使用と出力フォーマットの厳守】
-あなたは現在の環境において、追加で以下の3つのツールを使用することができます。
+あなたは現在の環境において、追加で以下の4つのツールを使用することができます。
 
 - 名前: "insert_womb_instruction"
 - 目的: WOMBのエディタの現在のカーソル位置に、指定したAIインストラクションを挿入します。ユーザーの代わりに指示を書き込む際に使用します。
