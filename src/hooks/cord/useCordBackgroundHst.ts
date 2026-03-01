@@ -5,6 +5,7 @@ import { Story, StoryVersion, LoreItem, StoryEntityHistory } from '../../types';
 interface UseCordBackgroundHstProps {
     lang: 'ja' | 'en';
     apiKey: string;
+    novelAIApiKey: string;
     aiModel: 'gemini-2.5-flash' | 'gemini-3.1-pro-preview' | 'glm-4-6';
     currentStoryId: string | null;
     savedStories: Story[];
@@ -20,6 +21,7 @@ interface UseCordBackgroundHstProps {
 export const useCordBackgroundHst = ({
     lang,
     apiKey,
+    novelAIApiKey,
     aiModel,
     currentStoryId: _currentStoryId,
     savedStories: _savedStories,
@@ -89,8 +91,9 @@ export const useCordBackgroundHst = ({
         newContent: string,
         updateIntervalLimit: number = 300 // default 300 chars
     ) => {
-        if (!apiKey) {
-            console.log(`[evaluateBackgroundTrigger] Aborted: No API Key.`);
+        const isGLM = aiModel === 'glm-4-6';
+        if ((!isGLM && !apiKey) || (isGLM && !novelAIApiKey)) {
+            console.log(`[evaluateBackgroundTrigger] Aborted: API Key missing for model ${aiModel}.`);
             return false;
         }
 
@@ -206,6 +209,7 @@ export const useCordBackgroundHst = ({
 
             // STEP 2: AI Selection Call (Who needs updates?)
             const { callGemini } = await import('../../utils/gemini');
+            const { callNovelAIChat } = await import('../../utils/novelai');
 
             const selectionPrompt = `
 You are an expert lore master analyzing a story diff.
@@ -224,7 +228,19 @@ Output strictly valid JSON in the following format. Nothing else.
 `;
             let selectedIds: string[] = [];
             try {
-                const selectionResponse = await callGemini(apiKey, selectionPrompt, aiModel as any);
+                let selectionResponse = "";
+                if (aiModel === 'glm-4-6') {
+                    if (!novelAIApiKey) throw new Error("NovelAI API Key missing");
+                    const res = await callNovelAIChat(
+                        novelAIApiKey,
+                        [{ role: 'user', content: "Analyze the diff and select entities." }],
+                        aiModel,
+                        selectionPrompt
+                    );
+                    selectionResponse = res.text || "";
+                } else {
+                    selectionResponse = await callGemini(apiKey, selectionPrompt, aiModel as any);
+                }
                 const cleanedResponse = selectionResponse.replace(/```json/g, '').replace(/```/g, '').trim();
                 const parsed = JSON.parse(cleanedResponse);
                 selectedIds = parsed.targetEntityIds || [];
@@ -279,7 +295,19 @@ Format:
 }
 `;
                 try {
-                    const updateResponse = await callGemini(apiKey, updatePrompt, aiModel as any);
+                    let updateResponse = "";
+                    if (aiModel === 'glm-4-6') {
+                        if (!novelAIApiKey) throw new Error("NovelAI API Key missing");
+                        const res = await callNovelAIChat(
+                            novelAIApiKey,
+                            [{ role: 'user', content: "Process the history updates returning JSON only." }],
+                            aiModel,
+                            updatePrompt
+                        );
+                        updateResponse = res.text || "";
+                    } else {
+                        updateResponse = await callGemini(apiKey, updatePrompt, aiModel as any);
+                    }
                     const cRes = updateResponse.replace(/```json/g, '').replace(/```/g, '').trim();
                     const parsedUpdate = JSON.parse(cRes);
 

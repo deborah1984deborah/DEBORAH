@@ -49,7 +49,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     const currentStoryIdFromStorage = localStorage.getItem('womb_current_story_id');
 
     const backgroundHst = useCordBackgroundHst({
-        lang, apiKey, aiModel, currentStoryId: currentStoryIdFromStorage,
+        lang, apiKey, novelAIApiKey, aiModel, currentStoryId: currentStoryIdFromStorage,
         savedStories: initialSavedStories,
         getActiveLineage,
         mommyList, nerdList, loreList,
