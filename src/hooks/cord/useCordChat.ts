@@ -10,7 +10,8 @@ export const useCordChat = (
     triggerAutoHistory?: () => void,
     triggerWombGeneration?: () => Promise<void>,
     cordOutputLength: number = 400,
-    checkIsBackgroundProcessing?: () => boolean
+    checkIsBackgroundProcessing?: () => boolean,
+    isPseudoThinkingModeEnabled: boolean = false
 ) => {
     // 1. Session & Storage Management
     const session = useCordSession(currentStoryId, content, triggerSave, lang);
@@ -35,7 +36,8 @@ export const useCordChat = (
         triggerAutoHistory,
         triggerWombGeneration,
         cordOutputLength,
-        checkIsBackgroundProcessing
+        checkIsBackgroundProcessing,
+        isPseudoThinkingModeEnabled
     });
 
     return {

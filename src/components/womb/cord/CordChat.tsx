@@ -26,6 +26,7 @@ interface CordChatProps {
     triggerWombGeneration?: (blueprintOverride?: string) => Promise<void>;
     isWombGenerating?: boolean;
     cordOutputLength: number;
+    isPseudoThinkingModeEnabled?: boolean;
 }
 
 export const CordChat: React.FC<CordChatProps> = ({
@@ -33,7 +34,7 @@ export const CordChat: React.FC<CordChatProps> = ({
     getWombContext, onProcessingChange, onDebugDataChange,
     isBackgroundProcessing = false, processingTargetName = null,
     triggerAutoHistory, triggerWombGeneration, isWombGenerating = false,
-    cordOutputLength
+    cordOutputLength, isPseudoThinkingModeEnabled = false
 }) => {
     // Ref to track latest background processing state for async polling in CORD's AI loop
     const isBackgroundProcessingRef = useRef(isBackgroundProcessing);
@@ -67,7 +68,7 @@ export const CordChat: React.FC<CordChatProps> = ({
         cordDebugSystemPrompt,
         cordDebugInputText,
         cordDebugMatchedEntities
-    } = useCordChat(currentStoryId, content, triggerSave, lang, triggerAutoHistory, triggerWombGeneration, cordOutputLength, checkIsBackgroundProcessing);
+    } = useCordChat(currentStoryId, content, triggerSave, lang, triggerAutoHistory, triggerWombGeneration, cordOutputLength, checkIsBackgroundProcessing, isPseudoThinkingModeEnabled);
 
     const [inputValue, setInputValue] = useState('');
     const [showHistory, setShowHistory] = useState(false); // Modal State

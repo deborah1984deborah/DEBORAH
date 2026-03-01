@@ -341,6 +341,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                             triggerAutoHistory={triggerAutoHistory}
                             triggerWombGeneration={triggerWombGeneration}
                             cordOutputLength={cordOutputLength}
+                            isPseudoThinkingModeEnabled={isPseudoThinkingModeEnabled}
                         />
                     </div>
                 </div>
