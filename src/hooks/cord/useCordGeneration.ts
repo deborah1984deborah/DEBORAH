@@ -333,6 +333,11 @@ export const useCordGeneration = ({
                             // Inject the explicit thinking trigger into the history for the NEXT loop to see
                             currentApiMessages.push({ role: 'user', content: postToolThinkInstruction } as any);
                             console.log("[CORD] ✨ Pseudo-Thinking Mode: Re-arming for PHASE 1 (Tool Result Thinking).");
+
+                            if (aiModel === 'glm-4-6') {
+                                console.log("[CORD] Waiting for NovelAI concurrency lock to release before Step 4...");
+                                await new Promise(resolve => setTimeout(resolve, 1500));
+                            }
                         }
 
                         // loop continues!
