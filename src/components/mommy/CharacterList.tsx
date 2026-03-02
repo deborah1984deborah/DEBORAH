@@ -41,8 +41,8 @@ export function CharacterList({ lang, mommyList, nerdList, currentView, onDelete
                     </div>
 
                     {/* Info */}
-                    <div className="flex-1 min-w-0">
-                        <h3 className="text-xl font-bold mb-2 truncate pr-16">{char.name}</h3>
+                    <div className="flex-1 min-w-0" style={{ paddingRight: '70px' }}>
+                        <h3 className="text-xl font-bold mb-2 truncate">{char.name}</h3>
 
                         {currentView === 'mommy' ? (
                             <div className="text-sm opacity-80 space-y-1">
