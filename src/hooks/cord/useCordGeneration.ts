@@ -222,7 +222,10 @@ export const useCordGeneration = ({
 
                     // --- Phase Transition (Phase 1 -> Phase 2) ---
                     if (isIteratingPseudoThought) {
-                        activePseudoThought = accumulatedThought.replace(/\[THINKING_COMPLETE\]/g, "").trim();
+                        // Keep the raw thought (including [THINKING_COMPLETE]) for the AI's internal history
+                        activePseudoThought = accumulatedThought.trim();
+                        // For display purposes, we strip the tag
+                        const displayPseudoThought = activePseudoThought.replace(/\[THINKING_COMPLETE\]/g, "").trim();
                         isIteratingPseudoThought = false;
 
                         // Inject Phase 2 implicit user query
@@ -230,12 +233,12 @@ export const useCordGeneration = ({
                             ? `\n\n思考が完了しました。思考した内容をベースに、ユーザーからのメッセージへ本回答を行ってください。`
                             : `\n\nThinking is complete. Now, based on your thoughts, please provide the final response to the user's message.`;
 
-                        // We must append the AI's thought into the history so it can "see" what it just thought
+                        // We must append the AI's FULL thought (with the tag) into the history so it can "see" what it just thought
                         currentApiMessages.push({ role: 'ai', content: activePseudoThought } as any);
                         currentApiMessages.push({ role: 'user', content: phase2Instruction } as any);
 
                         console.log("[CORD] ✨ Pseudo-Thinking Mode: PHASE 1 Complete. Transitioning to PHASE 2 (Response).");
-                        console.log("[CORD] Intercepted Thought:", activePseudoThought);
+                        console.log("[CORD] Intercepted Thought:", displayPseudoThought);
 
                         if (aiModel === 'glm-4-6') {
                             console.log("[CORD] Waiting for NovelAI concurrency lock to release...");
