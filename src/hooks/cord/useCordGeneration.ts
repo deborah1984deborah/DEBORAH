@@ -236,7 +236,13 @@ export const useCordGeneration = ({
 
                         console.log("[CORD] ✨ Pseudo-Thinking Mode: PHASE 1 Complete. Transitioning to PHASE 2 (Response).");
                         console.log("[CORD] Intercepted Thought:", activePseudoThought);
-                        continue; // Trigger the next API call immediately
+
+                        if (aiModel === 'glm-4-6') {
+                            console.log("[CORD] Waiting for NovelAI concurrency lock to release...");
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                        }
+
+                        continue; // Trigger the next API call
                     }
 
                     // --- Post-Streaming Async Tool Parsing (Fallback logic specifically for models without native tool call like NovelAI) ---
