@@ -68,31 +68,14 @@ export function CharacterList({ lang, mommyList, nerdList, currentView, onDelete
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-sm opacity-80 space-y-1">
-                                <div className="info-row">
-                                    <span className="info-label">{lang === 'en' ? 'Face:' : '顔:'}</span>
-                                    <span className="truncate flex-1">efwef</span> {/* Placeholder/Correct later if needed */}
-                                </div>
+                            <div className="text-sm opacity-80 space-y-2">
                                 <div className="info-row">
                                     <span className="info-label">{lang === 'en' ? 'Age:' : '年齢:'}</span>
                                     <span>{(char as NerdCharacter).age}{lang === 'ja' ? '歳' : ''}</span>
                                 </div>
-                                <div className="info-row">
-                                    <span className="info-label">{lang === 'en' ? 'Height:' : '身長:'}</span>
-                                    <span>1cm</span> {/* Placeholder from previous code? Or was it hardcoded? */}
+                                <div className="line-clamp-2 italic bg-black/10 p-1.5 rounded text-xs mt-1">
+                                    {(char as NerdCharacter).history}
                                 </div>
-                                <div className="info-row">
-                                    <span className="info-label">{lang === 'en' ? 'Measurements:' : 'スリーサイズ:'}</span>
-                                    <span className="text-sm">
-                                        B:1cm W:1cm H:1cm
-                                    </span>
-                                </div>
-                                {/* Wait, NerdCharacter doesn't have face/height/measurements in types usually?
-                                    Checking types... NerdCharacter has name, age, history.
-                                    The previous code block I saw in view_file showed hardcoded 'efwef' and '1cm'.
-                                    I should probably respect that or clean it up.
-                                    Let's keep it consistent with what I saw in previous logs/files to avoid breaking structure if I can't verify types right now.
-                                 */}
                             </div>
                         )}
                     </div>
