@@ -19,6 +19,8 @@ import { WombChatModal } from './WombChatModal';
 import { useWombSystem } from '../../hooks/womb/useWombSystem';
 import { exportStoryData } from '../../utils/exportUtils';
 import { readImportedStoryData } from '../../utils/importUtils';
+import { exportAllEntitiesAsZip } from '../../utils/entityExportUtils';
+import { readImportedEntitiesZip } from '../../utils/entityImportUtils';
 
 
 
@@ -249,6 +251,65 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
     }, [setApiKey, setTmdbAccessToken, setAiModel, setWombOutputLength, setCordOutputLength, setKeywordScanRange]);
 
 
+    const handleDownloadAllEntities = async () => {
+        if (!mommyList.length && !nerdList.length && !loreList.length) {
+            alert(lang === 'ja' ? 'ダウンロードするデータがありません。' : 'No data to download.');
+            return;
+        }
+
+        const success = await exportAllEntitiesAsZip(mommyList, nerdList, loreList);
+        if (!success) {
+            alert(lang === 'ja' ? 'ダウンロードに失敗しました。' : 'Failed to download entities.');
+        }
+    };
+
+    const handleImportAllEntities = async (file: File) => {
+        try {
+            const imported = await readImportedEntitiesZip(file);
+
+            // Read current records
+            const getLocal = (key: string) => {
+                const str = localStorage.getItem(key);
+                return str ? JSON.parse(str) : [];
+            };
+
+            const currentMommy = getLocal('deborah_mommy_list_v1');
+            const currentNerd = getLocal('deborah_nerd_list_v1');
+            const currentLore = getLocal('deborah_lore_list_v1');
+
+            // Merge logic: Overwrite if ID exists, append if new.
+            const mergeLists = (currentList: any[], importedList: any[]) => {
+                const merged = [...currentList];
+                importedList.forEach(importedItem => {
+                    const index = merged.findIndex(i => i.id === importedItem.id);
+                    if (index !== -1) {
+                        merged[index] = importedItem; // Overwrite
+                    } else {
+                        merged.push(importedItem); // Append
+                    }
+                });
+                return merged;
+            };
+
+            const mergedMommy = mergeLists(currentMommy, imported.mommyList);
+            const mergedNerd = mergeLists(currentNerd, imported.nerdList);
+            const mergedLore = mergeLists(currentLore, imported.loreList);
+
+            // Save to localStorage
+            localStorage.setItem('deborah_mommy_list_v1', JSON.stringify(mergedMommy));
+            localStorage.setItem('deborah_nerd_list_v1', JSON.stringify(mergedNerd));
+            localStorage.setItem('deborah_lore_list_v1', JSON.stringify(mergedLore));
+
+            if (window.confirm(lang === 'ja' ? "エンティティのインポートが完了しました。データを反映させるため、ページをリロードしますか？" : "Import complete. Reload the page to apply changes?")) {
+                window.location.reload();
+            }
+
+        } catch (error) {
+            console.error('[WombSystem] Failed to import entities:', error);
+            alert(lang === 'ja' ? 'インポートに失敗しました。ファイルの形式が正しくない可能性があります。' : 'Failed to import entities. The file may be invalid.');
+        }
+    };
+
     return (
         <div className="womb-system-container" style={{
             backgroundColor: 'rgba(26, 26, 32, 0.92)', // #1A1A20 equivalent
@@ -467,6 +528,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     onSaveHistory={handleSaveHistory}
                     onDeleteHistory={handleDeleteHistory}
                     onToggleInvalidateHistory={handleToggleInvalidateHistory}
+                    onDownloadAllEntities={handleDownloadAllEntities}
+                    onImportAllEntities={handleImportAllEntities}
                 />
             )}
 

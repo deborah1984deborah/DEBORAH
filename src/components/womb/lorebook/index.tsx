@@ -28,6 +28,8 @@ export const LorebookModal: React.FC<{
     onSaveHistory: () => void;
     onDeleteHistory: (id: string) => void;
     onToggleInvalidateHistory: (historyId: string, currentVersionId: string | null, isInvalidated: boolean) => void;
+    onDownloadAllEntities?: () => void;
+    onImportAllEntities?: (file: File) => void;
 }> = ({
     lang, onClose,
     mommyList, nerdList, loreList,
@@ -37,7 +39,9 @@ export const LorebookModal: React.FC<{
     historyLogs, invalidations, getActiveLineage, storyVersions, currentStoryId, currentVersionId, onAddHistory, onAddFullHistory, onUpdateHistory,
     onSaveHistory,
     onDeleteHistory,
-    onToggleInvalidateHistory
+    onToggleInvalidateHistory,
+    onDownloadAllEntities,
+    onImportAllEntities
 }) => {
         const [activeTab, setActiveTab] = React.useState<'mommy' | 'nerd' | 'lore'>('mommy');
         const [selectedItem, setSelectedItem] = React.useState<LoreItem | null>(null);
@@ -86,6 +90,8 @@ export const LorebookModal: React.FC<{
                             setSelectedItem={setSelectedItem}
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
+                            onDownloadAllEntities={onDownloadAllEntities}
+                            onImportAllEntities={onImportAllEntities}
                         />
 
                         <LorebookDetails
