@@ -273,9 +273,9 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                 return str ? JSON.parse(str) : [];
             };
 
-            const currentMommy = getLocal('deborah_mommy_list_v1');
-            const currentNerd = getLocal('deborah_nerd_list_v1');
-            const currentLore = getLocal('deborah_lore_list_v1');
+            const currentMommy = getLocal('deborah_fuckmeat_v1');
+            const currentNerd = getLocal('deborah_penis_v1');
+            const currentLore = getLocal('deborah_lore_v1');
 
             // Merge logic: Overwrite if ID exists, append if new.
             const mergeLists = (currentList: any[], importedList: any[]) => {
@@ -296,9 +296,9 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
             const mergedLore = mergeLists(currentLore, imported.loreList);
 
             // Save to localStorage
-            localStorage.setItem('deborah_mommy_list_v1', JSON.stringify(mergedMommy));
-            localStorage.setItem('deborah_nerd_list_v1', JSON.stringify(mergedNerd));
-            localStorage.setItem('deborah_lore_list_v1', JSON.stringify(mergedLore));
+            localStorage.setItem('deborah_fuckmeat_v1', JSON.stringify(mergedMommy));
+            localStorage.setItem('deborah_penis_v1', JSON.stringify(mergedNerd));
+            localStorage.setItem('deborah_lore_v1', JSON.stringify(mergedLore));
 
             if (window.confirm(lang === 'ja' ? "エンティティのインポートが完了しました。データを反映させるため、ページをリロードしますか？" : "Import complete. Reload the page to apply changes?")) {
                 window.location.reload();
