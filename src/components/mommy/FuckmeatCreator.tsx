@@ -342,7 +342,7 @@ export function FuckmeatCreator({ lang, onSave, initialData }: Props) {
                 className="btn-solid-white w-full py-5 font-bold rounded text-2xl"
                 onClick={handleSubmit}
             >
-                {t.submit}
+                {initialData ? t.update : t.submit}
             </button>
 
             <CelebrityVerificationModal
