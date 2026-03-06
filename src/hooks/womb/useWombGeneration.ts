@@ -241,7 +241,24 @@ export const useWombGeneration = ({
             if (/^\s*@@@n/.test(cleanGeneratedText)) {
                 cleanGeneratedText = '\n' + cleanGeneratedText.replace(/^\s*@@@n\s*/, '');
             } else {
-                cleanGeneratedText = cleanGeneratedText.replace(/^\s+/, '');
+                // Only trim leading newlines, not all leading whitespaces (spaces/tabs), to preserve English sentence spacing
+                cleanGeneratedText = cleanGeneratedText.replace(/^[\r\n]+/, '');
+            }
+
+            // --- Heuristic: Inject space for English sentence continuations ---
+            if (freshContent.length > 0 && cleanGeneratedText.length > 0) {
+                const lastChar = freshContent.slice(-1);
+                const firstChar = cleanGeneratedText.charAt(0);
+
+                // Only act if there is no space or newline present at the boundary
+                if (!/\s/.test(lastChar) && !/\s/.test(firstChar)) {
+                    // Automatically inject a space if both characters are typical Western alphanumeric or punctuation.
+                    // This fixes the issue where Chat Models natively suppress leading spaces.
+                    const isWesternRegex = /[a-zA-Z0-9.,!?;:"'()[\]{}<>“”‘’]/;
+                    if (isWesternRegex.test(lastChar) && isWesternRegex.test(firstChar)) {
+                        cleanGeneratedText = " " + cleanGeneratedText;
+                    }
+                }
             }
 
             // Log the generation interactions with current chunkId

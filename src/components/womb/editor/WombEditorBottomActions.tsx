@@ -11,6 +11,7 @@ interface WombEditorBottomActionsProps {
     canRedo?: boolean;
     redoBranchCount?: number;
     onSave: () => void;
+    onImportStory?: (file: File) => void;
 }
 
 export const WombEditorBottomActions: React.FC<WombEditorBottomActionsProps> = ({
@@ -23,8 +24,22 @@ export const WombEditorBottomActions: React.FC<WombEditorBottomActionsProps> = (
     onRedo,
     canRedo,
     redoBranchCount = 0,
-    onSave
+    onSave,
+    onImportStory
 }) => {
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && onImportStory) {
+            onImportStory(file);
+        }
+        // Reset input so the same file can be selected again if needed
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
     return (
         <div style={{
             position: 'absolute',
@@ -34,6 +49,51 @@ export const WombEditorBottomActions: React.FC<WombEditorBottomActionsProps> = (
             gap: '0.75rem',
             zIndex: 10
         }}>
+            {/* IMPORT BUTTON */}
+            <input
+                type="file"
+                accept=".json"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+            />
+            <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLocked || !onImportStory}
+                title="Import Story"
+                style={{
+                    background: 'none',
+                    border: 'none',
+                    color: (isLocked || !onImportStory) ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.7)',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: (isLocked || !onImportStory) ? 'default' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    padding: 0
+                }}
+                onMouseEnter={(e) => {
+                    if (!isLocked && onImportStory) {
+                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.transform = 'scale(1.1)';
+                    }
+                }}
+                onMouseLeave={(e) => {
+                    if (!isLocked && onImportStory) {
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                    }
+                }}
+            >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+            </button>
+
             <button
                 onClick={onOpenChatModal}
                 title={lang === 'ja' ? 'WOMB 生成履歴' : 'WOMB Interaction History'}

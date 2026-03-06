@@ -11,6 +11,7 @@ interface WombEditorHeaderProps {
     onInsertRegion: () => void;
     onOpenFileList: () => void;
     onNewStory: () => void;
+    onDownloadStory?: () => void;
 }
 
 export const WombEditorHeader: React.FC<WombEditorHeaderProps> = ({
@@ -22,7 +23,8 @@ export const WombEditorHeader: React.FC<WombEditorHeaderProps> = ({
     onManualSave,
     onInsertRegion,
     onOpenFileList,
-    onNewStory
+    onNewStory,
+    onDownloadStory
 }) => {
     return (
         <div style={{
@@ -117,6 +119,18 @@ export const WombEditorHeader: React.FC<WombEditorHeaderProps> = ({
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 20h9"></path>
                             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                    }
+                />
+                <TooltipButton
+                    label="Download Story"
+                    onClick={onDownloadStory || (() => { console.log("Download story not provided"); })}
+                    disabled={isLocked || !onDownloadStory}
+                    icon={
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
                         </svg>
                     }
                 />

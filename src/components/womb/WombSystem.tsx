@@ -17,6 +17,8 @@ import { BranchSelectorModal } from './BranchSelectorModal';
 import { WombChatModal } from './WombChatModal';
 
 import { useWombSystem } from '../../hooks/womb/useWombSystem';
+import { exportStoryData } from '../../utils/exportUtils';
+import { readImportedStoryData } from '../../utils/importUtils';
 
 
 
@@ -131,6 +133,85 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         }
     }, [handleAddFullHistory, mommyList, nerdList, loreList]);
 
+    const handleDownloadStory = React.useCallback(() => {
+        if (!currentStoryId) {
+            alert("ダウンロードするストーリーがありません。");
+            return;
+        }
+        const success = exportStoryData(
+            currentStoryId,
+            savedStories,
+            globalRelations,
+            historyLogs,
+            activeMommyIds,
+            activeNerdIds,
+            activeLoreIds
+        );
+        if (!success) {
+            alert("ストーリーデータのダウンロードに失敗しました。");
+        }
+    }, [currentStoryId, savedStories, globalRelations, historyLogs, activeMommyIds, activeNerdIds, activeLoreIds]);
+
+    const handleImportStory = React.useCallback(async (file: File) => {
+        try {
+            const importedData = await readImportedStoryData(file);
+
+            // 1. Generate new Story ID to prevent overwriting
+            const newStoryId = Date.now().toString();
+
+            // 2. Clone the imported story and remap its ID
+            const newStory = { ...importedData.story, id: newStoryId };
+
+            // 3. Save new Story to localStorage and System state
+            // In WombSystem we don't have direct access to setSavedStories, so we read, append, write.
+            const currentStoriesStr = localStorage.getItem('womb_stories');
+            const currentStories = currentStoriesStr ? JSON.parse(currentStoriesStr) : [];
+            const updatedStories = [...currentStories, newStory];
+            localStorage.setItem('womb_stories', JSON.stringify(updatedStories));
+
+            // 4. Handle Lore Relations for the new Story
+            const currentRelationsStr = localStorage.getItem('womb_story_relations');
+            const currentRelations: any[] = currentRelationsStr ? JSON.parse(currentRelationsStr) : [];
+            const newRelations = importedData.activeLores.map(lore => ({
+                id: crypto.randomUUID(),
+                storyId: newStoryId,
+                entityId: lore.entityId,
+                entityType: lore.entityType
+            }));
+            const updatedRelations = [...currentRelations, ...newRelations];
+            localStorage.setItem('womb_story_relations', JSON.stringify(updatedRelations));
+            // Trigger a re-render of useWombSystem's internal state by calling a dummy save or forced refresh if possible
+            // ... Actually, handleSelectStory directly modifies activeIds based on globalRelations!
+
+            // 5. Handle Lore History Logs
+            // The history setter is available in useWombSystem, but it's not exported. 
+            // We'll write directly to localStorage for initialization, then rely on handleSelectStory to pick it up.
+            const currentLogsStr = localStorage.getItem('deborah_history_logs_v1');
+            const currentLogs: any[] = currentLogsStr ? JSON.parse(currentLogsStr) : [];
+            const remappedHistories = importedData.loreHistory.map(log => ({
+                ...log,
+                id: crypto.randomUUID(), // New history ID to avoid collision
+                storyId: newStoryId // Re-attach to new story
+            }));
+            const updatedLogs = [...currentLogs, ...remappedHistories];
+            localStorage.setItem('deborah_history_logs_v1', JSON.stringify(updatedLogs));
+
+            // 6. Reload the application or state to reflect these local storage changes
+            // Since we bypassed the hook state (setSavedStories, setGlobalRelations, setHistoryLogs) which are not all exported,
+            // the safest and cleanest way to ensure consistency after a bulk import is to trigger a minimal reload or let 
+            // the user select it from the file list. However, user wanted it to load immediately.
+            // Let's force a reload for now, or we can just window.location.reload() for total safety.
+            // For a smoother experience, we will alert success and ask to reload.
+            if (window.confirm("インポートが完了しました。データを反映させるため、ページをリロードしますか？")) {
+                window.location.reload();
+            }
+
+        } catch (error) {
+            console.error("Failed to import story:", error);
+            alert("インポートに失敗しました。ファイルの形式が正しくない可能性があります。");
+        }
+    }, []);
+
     // State to track which debug panel is functionally in front
     const [activeDebugPanel, setActiveDebugPanel] = useState<'womb' | 'cord'>('womb');
     const [isCordProcessing, setIsCordProcessing] = useState(false);
@@ -217,6 +298,8 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
                     showWombDebugInfo={showWombDebugInfo}
                     isCordProcessing={isCordProcessing || isBackgroundProcessing}
                     onOpenChatModal={() => setIsWombChatModalOpen(true)}
+                    onDownloadStory={handleDownloadStory}
+                    onImportStory={handleImportStory}
                 />
 
                 {/* CORD: Chat Interface (Right) */}

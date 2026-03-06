@@ -24,6 +24,8 @@ interface WombEditorProps {
     showWombDebugInfo?: boolean;
     isCordProcessing?: boolean;
     onOpenChatModal: () => void;
+    onDownloadStory?: () => void;
+    onImportStory?: (file: File) => void;
 }
 
 export const WombEditor: React.FC<WombEditorProps> = ({
@@ -43,7 +45,9 @@ export const WombEditor: React.FC<WombEditorProps> = ({
     redoBranchCount = 0,
     showWombDebugInfo,
     isCordProcessing,
-    onOpenChatModal
+    onOpenChatModal,
+    onDownloadStory,
+    onImportStory
 }) => {
     const editorRef = useRef<any>(null); // Monaco editor instance
     const monaco = useMonaco();
@@ -236,6 +240,7 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                 onInsertRegion={handleInsertRegion}
                 onOpenFileList={onOpenFileList}
                 onNewStory={onNewStory}
+                onDownloadStory={onDownloadStory}
             />
 
             <div style={{
@@ -303,6 +308,7 @@ export const WombEditor: React.FC<WombEditorProps> = ({
                 canRedo={canRedo}
                 redoBranchCount={redoBranchCount}
                 onSave={onSave}
+                onImportStory={onImportStory}
             />
         </div>
     );
