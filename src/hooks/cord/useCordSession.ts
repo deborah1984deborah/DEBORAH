@@ -173,6 +173,17 @@ export const useCordSession = (currentStoryId: string | undefined, content: stri
         }
     };
 
+    // Action: Delete All Sessions
+    const deleteAllSessions = () => {
+        sessions.forEach(s => {
+            localStorage.removeItem(STORAGE_KEY_MESSAGES_PREFIX + s.id);
+        });
+        setSessions([]);
+        saveSessionsToStorage([]);
+        setCurrentSessionId(null);
+        setMessages([]);
+    };
+
     // Action: Toggle WOMB Awareness
     const toggleWombAwareness = (sessionId: string, isAware: boolean) => {
         const storedSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
@@ -235,6 +246,7 @@ export const useCordSession = (currentStoryId: string | undefined, content: stri
         startNewSession,
         addMessage,
         deleteSession,
+        deleteAllSessions,
         editMessage,
         deleteMessage,
         toggleWombAwareness,

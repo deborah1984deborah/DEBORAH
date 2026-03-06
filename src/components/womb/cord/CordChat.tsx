@@ -56,6 +56,7 @@ export const CordChat: React.FC<CordChatProps> = ({
         addMessage,
         generateAiResponse,
         deleteSession,
+        deleteAllSessions,
         startNewSession,
         setCurrentSessionId,
         editMessage,
@@ -350,6 +351,7 @@ export const CordChat: React.FC<CordChatProps> = ({
                     currentStoryId={currentStoryId}
                     onSelectSession={handleSelectSession}
                     onDeleteSession={deleteSession}
+                    onDeleteAllSessions={deleteAllSessions}
                     lang={lang}
                 />
             )}

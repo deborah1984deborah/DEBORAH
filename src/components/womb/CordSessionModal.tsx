@@ -8,9 +8,10 @@ interface CordSessionModalProps {
     lang?: 'ja' | 'en';
     onSelectSession: (sessionId: string) => void;
     onDeleteSession?: (sessionId: string) => void;
+    onDeleteAllSessions?: () => void;
 }
 
-export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, sessions, currentStoryId, lang = 'ja', onSelectSession, onDeleteSession }) => {
+export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, sessions, currentStoryId, lang = 'ja', onSelectSession, onDeleteSession, onDeleteAllSessions }) => {
     // Helper to format date
     const formatDate = (timestamp: number) => {
         return new Date(timestamp).toLocaleString();
@@ -22,6 +23,13 @@ export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, ses
         e.stopPropagation();
         if (window.confirm(lang === 'ja' ? 'このチャットを削除してもよろしいですか？' : 'Are you sure you want to delete this chat?')) {
             onDeleteSession?.(sessionId);
+        }
+    };
+
+    const handleDeleteAllClick = () => {
+        if (sessions.length === 0) return;
+        if (window.confirm(lang === 'ja' ? '全てのチャット履歴を完全に削除してもよろしいですか？\n（この操作は元に戻せません）' : 'Are you sure you want to delete ALL chat history?\n(This cannot be undone)')) {
+            onDeleteAllSessions?.();
         }
     };
 
@@ -124,6 +132,39 @@ export const CordSessionModal: React.FC<CordSessionModalProps> = ({ onClose, ses
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </div>
+
+                        {/* DELETE ALL BUTTON */}
+                        <button onClick={handleDeleteAllClick} disabled={sessions.length === 0} title={lang === 'ja' ? '全件削除' : 'Delete All'} style={{
+                            background: 'none',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '4px',
+                            color: sessions.length === 0 ? 'rgba(239, 68, 68, 0.3)' : '#f87171',
+                            cursor: sessions.length === 0 ? 'default' : 'pointer',
+                            padding: '0.3rem 0.6rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            letterSpacing: '0.05em',
+                            transition: 'all 0.2s',
+                        }} onMouseOver={e => {
+                            if (sessions.length > 0) {
+                                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                                e.currentTarget.style.color = '#fff';
+                            }
+                        }} onMouseOut={e => {
+                            if (sessions.length > 0) {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = '#f87171';
+                            }
+                        }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            {lang === 'ja' ? '全件削除' : 'CLEAR ALL'}
+                        </button>
 
                         <button onClick={onClose} style={{
                             background: 'none',

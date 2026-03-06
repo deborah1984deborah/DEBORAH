@@ -53,6 +53,7 @@ export const useCordChat = (
         startNewSession: session.startNewSession,
         addMessage: session.addMessage,
         deleteSession: session.deleteSession,
+        deleteAllSessions: session.deleteAllSessions,
         editMessage: session.editMessage,
         deleteMessage: session.deleteMessage,
         toggleWombAwareness: session.toggleWombAwareness,
