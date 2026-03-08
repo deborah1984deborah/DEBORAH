@@ -111,9 +111,26 @@ export const callNovelAIChatStream = async function* (
             continue;
         }
 
+        let contentObj = msg.content || "";
+
+        // --- CRITICAL FIX: Persist Tool Calls (Narrative Blueprints) for GLM-4 ---
+        // Since GLM-4 does not natively support tool calling in this endpoint,
+        // we must serialize any historical function calls (like trigger_womb_generation)
+        // back into the text format that the AI was instructed to output.
+        // Otherwise, the AI will completely forget what Blueprint it just wrote.
+        if (msg.functionCall) {
+            const toolString = `===BEGIN_TOOL_CALL===\n${JSON.stringify({
+                name: msg.functionCall.name,
+                args: msg.functionCall.args
+            })}\n===END_TOOL_CALL===`;
+
+            // Append the tool string to whatever conversational text (if any) the AI outputted before it
+            contentObj = contentObj ? `${contentObj}\n${toolString}` : toolString;
+        }
+
         oaiMessages.push({
             role: msg.role === 'ai' ? 'assistant' : msg.role,
-            content: msg.content
+            content: contentObj
         });
     }
 
