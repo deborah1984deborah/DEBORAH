@@ -117,6 +117,36 @@ export const callNovelAIChatStream = async function* (
         });
     }
 
+    // --- ENFORCE MAX CONTEXT FOR GLM-4 / NOVELAI API ---
+    // The GLM-4 API throws 400 if (input_tokens + max_tokens) > 36864
+    // We reserve 1500 for max_tokens, so target max input is ~35000 tokens.
+    // 1 token is roughly 1-2 chars for CJK, let's be extremely safe and set a hard limit of 28000 characters total.
+    const MAX_CHAR_LIMIT = 28000;
+
+    // We always want to keep the very first message (System Instruction, if any)
+    // and the very last message (The current prompt/story context)
+    const hasSystemInstruction = systemInstruction ? true : false;
+
+    let currentLength = oaiMessages.reduce((sum, m) => sum + (m.content ? m.content.length : 0), 0);
+
+    // If we exceed the limit, start removing the oldest context messages (index 1 to length-2)
+    while (currentLength > MAX_CHAR_LIMIT && oaiMessages.length > (hasSystemInstruction ? 2 : 1)) {
+        // Remove the oldest message that isn't the system prompt
+        const removeIdx = hasSystemInstruction ? 1 : 0;
+        const removedMsg = oaiMessages.splice(removeIdx, 1)[0];
+        currentLength -= (removedMsg.content ? removedMsg.content.length : 0);
+        console.log(`[NovelAI] Trimmed message to stay within context limits. Removed ${removedMsg.content ? removedMsg.content.length : 0} chars.`);
+    }
+
+    // Safety fallback if the very last message itself is absurdly large (e.g. huge wombContextLength was set)
+    // We shouldn't blindly truncate the user prompt because it breaks formatting, but if it's the only thing left:
+    const lastMsgIndex = oaiMessages.length - 1;
+    if (lastMsgIndex >= 0 && oaiMessages[lastMsgIndex].content && oaiMessages[lastMsgIndex].content.length > MAX_CHAR_LIMIT) {
+        console.warn(`[NovelAI] The final user prompt itself exceeds the maximum limit (${oaiMessages[lastMsgIndex].content.length} > ${MAX_CHAR_LIMIT}). Forcing truncation.`);
+        const content = oaiMessages[lastMsgIndex].content;
+        oaiMessages[lastMsgIndex].content = content.substring(content.length - MAX_CHAR_LIMIT);
+    }
+
     const payload = {
         model,
         messages: oaiMessages,
