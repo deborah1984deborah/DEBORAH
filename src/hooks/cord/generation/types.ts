@@ -4,7 +4,7 @@ export interface UseCordGenerationProps {
     lang: 'ja' | 'en';
     sessions: ChatSession[];
     messages: ChatMessage[];
-    addMessage: (role: 'user' | 'ai' | 'system' | 'function', content: string, sessionIdOverride?: string, functionCall?: any, rawParts?: any[], thoughtSummary?: string) => string;
+    addMessage: (role: 'user' | 'ai' | 'system' | 'function', content: string, sessionIdOverride?: string, functionCall?: any, rawParts?: any[], thoughtSummary?: string) => Promise<string>;
     cordDebug: {
         setCordDebugSystemPrompt: (v: string) => void;
         setCordDebugInputText: (v: string) => void;

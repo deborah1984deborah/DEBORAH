@@ -57,6 +57,7 @@ export const useCordChat = (
         editMessage: session.editMessage,
         deleteMessage: session.deleteMessage,
         toggleWombAwareness: session.toggleWombAwareness,
+        isCordStorageReady: session.isCordStorageReady,
 
         // Filter helper
         filteredSessions: session.sessions.filter(s =>

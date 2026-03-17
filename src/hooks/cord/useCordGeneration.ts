@@ -6,6 +6,7 @@ import { getCordTools } from './generation/cordTools';
 import { handleCordToolCall } from './generation/cordToolHandlers';
 import { parseAsyncToolResponse } from './generation/parseAsyncToolResponse';
 import { UseCordGenerationProps } from './generation/types';
+import { getItem, STORES } from '../../utils/storageUtils';
 
 export const useCordGeneration = ({
     lang,
@@ -39,11 +40,11 @@ export const useCordGeneration = ({
         if (!apiKey && !novelAIApiKey) {
             // Fallback mock if no API key
             setIsTyping(true);
-            setTimeout(() => {
+            setTimeout(async () => {
                 const responseText = lang === 'ja'
                     ? 'なるほど、それは興味深いですね。（※APIキーが未設定のためモック応答です）'
                     : 'I see, that sounds interesting. (Mock response due to missing API key)';
-                addMessage('ai', responseText, sessionId);
+                await addMessage('ai', responseText, sessionId);
                 setIsTyping(false);
             }, 1000);
             return;
@@ -54,11 +55,11 @@ export const useCordGeneration = ({
             const { callGeminiChatStream, callGemini } = await import('../../utils/gemini');
 
             // Get latest messages for this session from state/localStorage
-            const storedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + sessionId);
-            const currentMessages: ChatMessage[] = storedMessages ? JSON.parse(storedMessages) : messages;
+            const storedMessagesStr = await getItem<ChatMessage[]>(STORES.CORD, STORAGE_KEY_MESSAGES_PREFIX + sessionId);
+            const currentMessages: ChatMessage[] = storedMessagesStr ? storedMessagesStr : messages;
 
-            const freshSessionsStrForCheck = localStorage.getItem(STORAGE_KEY_SESSIONS);
-            const freshCurrentSessions: ChatSession[] = freshSessionsStrForCheck ? JSON.parse(freshSessionsStrForCheck) : sessions;
+            const freshSessionsStrForCheck = await getItem<ChatSession[]>(STORES.CORD, STORAGE_KEY_SESSIONS);
+            const freshCurrentSessions: ChatSession[] = freshSessionsStrForCheck ? freshSessionsStrForCheck : sessions;
             const currentSession = freshCurrentSessions.find(s => s.id === sessionId);
 
             const sessionLang = currentSession?.aiLang || lang;
@@ -276,7 +277,7 @@ export const useCordGeneration = ({
                         // If there is text before the tool, show it. Otherwise, it's just a tool call.
                         // We attach the thinking process to this initial Narrative Blueprint message
                         const toolThoughtSummary = (displayPseudoThought || accumulatedThought || "").replace(/\[THINKING_COMPLETE\]/g, "").trim() || undefined;
-                        addMessage('ai', textBeforeTool, sessionId, finalFunctionCall, finalRawParts, toolThoughtSummary);
+                        await addMessage('ai', textBeforeTool, sessionId, finalFunctionCall, finalRawParts, toolThoughtSummary);
 
                         // Clear streaming state during background execution to prevent UI duplicate thoughts
                         setIsStreaming(false);
@@ -319,7 +320,7 @@ export const useCordGeneration = ({
                             functionCall: { name: finalFunctionCall.name, args: {} }
                         };
 
-                        addMessage('function', uiDisplayMsg, sessionId, { name: finalFunctionCall.name, args: {} });
+                        await addMessage('function', uiDisplayMsg, sessionId, { name: finalFunctionCall.name, args: {} });
                         currentApiMessages = [...currentApiMessages, funcCallMsg as any, funcResMsg as any];
 
                         // --- Step 4 (Thinking) Trigger for the next loop iteration ---
@@ -359,14 +360,14 @@ export const useCordGeneration = ({
                         const finalThoughtSummary = rawThoughtForSummary.replace(/\[THINKING_COMPLETE\]/g, "").trim() || undefined;
 
                         if (finalText && actualTextContent) {
-                            addMessage('ai', finalText, sessionId, undefined, finalRawParts, finalThoughtSummary);
+                            await addMessage('ai', finalText, sessionId, undefined, finalRawParts, finalThoughtSummary);
                         } else if (actualTextContent) {
                             // Even if no specific UI logic, log the final AI text response
-                            addMessage('ai', actualTextContent, sessionId, undefined, finalRawParts, finalThoughtSummary);
+                            await addMessage('ai', actualTextContent, sessionId, undefined, finalRawParts, finalThoughtSummary);
                         } else {
                             // If literally empty message with just a thought
                             if (finalThoughtSummary) {
-                                addMessage('ai', "", sessionId, undefined, finalRawParts, finalThoughtSummary);
+                                await addMessage('ai', "", sessionId, undefined, finalRawParts, finalThoughtSummary);
                             }
                         }
                         // Clear streaming state immediately before any background processing
@@ -376,8 +377,8 @@ export const useCordGeneration = ({
 
                         // --- Auto Titling Logic ---
                         if (currentMessages.length === 1 && currentMessages[0].role === 'user') {
-                            const freshSessionsStr = localStorage.getItem(STORAGE_KEY_SESSIONS);
-                            const freshSessions: ChatSession[] = freshSessionsStr ? JSON.parse(freshSessionsStr) : sessions;
+                            const freshSessionsStr = await getItem<ChatSession[]>(STORES.CORD, STORAGE_KEY_SESSIONS);
+                            const freshSessions: ChatSession[] = freshSessionsStr ? freshSessionsStr : sessions;
                             const sessionToUpdate = freshSessions.find(s => s.id === sessionId);
                             if (sessionToUpdate && sessionToUpdate.title === 'New Chat') {
                                 try {
@@ -411,7 +412,7 @@ export const useCordGeneration = ({
             const responseText = fallbackLang === 'ja'
                 ? 'なるほど、それは興味深いですね。（※API通信エラーのためモック応答です）'
                 : 'I see, that sounds interesting. (Mock response due to API error)';
-            addMessage('ai', responseText, sessionId);
+            await addMessage('ai', responseText, sessionId);
         } finally {
             setIsTyping(false);
         }

@@ -1,7 +1,7 @@
 // src/utils/storageUtils.ts
 
 const DB_NAME = 'DeborahSystemDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented to 2 to create cord_store for existing users
 
 // Define stores we will use
 export const STORES = {
@@ -9,7 +9,8 @@ export const STORES = {
     RELATIONS: 'relations_store',   // For womb_story_relations
     LORE: 'lore_store',             // For deborah_fuckmeat_v1, deborah_penis_v1, deborah_lore_v1
     HISTORY: 'history_store',       // For deborah_history_logs_v1, invalidations
-    SETTINGS: 'settings_store'      // For fallback/settings
+    SETTINGS: 'settings_store',     // For fallback/settings
+    CORD: 'cord_store'              // For cord_chat_sessions, cord_chat_messages_[ID]
 } as const;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -111,9 +112,11 @@ export const removeItem = async (storeName: string, key: string): Promise<void> 
 export const migrateFromLocalStorage = async (): Promise<boolean> => {
     console.log("[StorageMigration] Starting migration check...");
 
-    // Check if migration has already been completed
-    if (localStorage.getItem('deborah_migration_completed') === 'true') {
-        console.log("[StorageMigration] Migration already completed.");
+    const isCoreMigrated = localStorage.getItem('deborah_migration_completed') === 'true';
+    const isCordMigrated = localStorage.getItem('cord_migration_completed') === 'true';
+
+    if (isCoreMigrated && isCordMigrated) {
+        console.log("[StorageMigration] All migrations already completed.");
         return true;
     }
 
@@ -130,25 +133,50 @@ export const migrateFromLocalStorage = async (): Promise<boolean> => {
             }
         };
 
-        // Story Data (The heaviest)
-        await migrateKey('womb_stories', STORES.STORIES);
-        await migrateKey('womb_story_relations', STORES.RELATIONS);
+        if (!isCoreMigrated) {
+            console.log("[StorageMigration] Migrating core data (stories, lore, history)...");
+            // Story Data (The heaviest)
+            await migrateKey('womb_stories', STORES.STORIES);
+            await migrateKey('womb_story_relations', STORES.RELATIONS);
 
-        // Lore Data
-        await migrateKey('deborah_fuckmeat_v1', STORES.LORE);
-        await migrateKey('deborah_penis_v1', STORES.LORE);
-        await migrateKey('deborah_lore_v1', STORES.LORE);
+            // Lore Data
+            await migrateKey('deborah_fuckmeat_v1', STORES.LORE);
+            await migrateKey('deborah_penis_v1', STORES.LORE);
+            await migrateKey('deborah_lore_v1', STORES.LORE);
 
-        // History Data
-        await migrateKey('deborah_history_logs_v1', STORES.HISTORY);
-        await migrateKey('deborah_history_invalidations_v1', STORES.HISTORY);
+            // History Data
+            await migrateKey('deborah_history_logs_v1', STORES.HISTORY);
+            await migrateKey('deborah_history_invalidations_v1', STORES.HISTORY);
 
-        // Optional: Move settings too, or leave them in LocalStorage.
-        // For uniformity, let's leave primitive settings (API keys, simple string flags) in LocalStorage for now 
-        // to minimize friction, as they are very small.
+            localStorage.setItem('deborah_migration_completed', 'true');
+        }
 
-        // Mark as completed
-        localStorage.setItem('deborah_migration_completed', 'true');
+        if (!isCordMigrated) {
+            // Cord Chat Data
+            console.log("[StorageMigration] Migrating CORD chat data...");
+            // 1. Migrate the sessions array
+            const sessionsData = localStorage.getItem('cord_chat_sessions');
+            if (sessionsData) {
+                await migrateKey('cord_chat_sessions', STORES.CORD);
+                // 2. Parse sessions to find all message keys and migrate them individually
+                try {
+                    const sessions = JSON.parse(sessionsData);
+                    if (Array.isArray(sessions)) {
+                        for (const session of sessions) {
+                            if (session.id) {
+                                const msgKey = `cord_chat_messages_${session.id}`;
+                                await migrateKey(msgKey, STORES.CORD);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("[StorageMigration] Failed to parse cord sessions for message migration:", e);
+                }
+            }
+
+            localStorage.setItem('cord_migration_completed', 'true');
+        }
+
         console.log("[StorageMigration] Migration successfully completed.");
         return true;
 
