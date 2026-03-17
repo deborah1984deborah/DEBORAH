@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Story, StoryLoreRelation, StoryEntityHistory } from '../../types';
+import { getItem, setItem, STORES } from '../../utils/storageUtils';
 
 interface UseWombStoryProps {
     lang: 'ja' | 'en';
@@ -35,15 +36,27 @@ export const useWombStory = ({
     const [savedStories, setSavedStories] = useState<Story[]>([]);
     const [showFileList, setShowFileList] = useState<boolean>(false);
 
+    // Add loading state for async storage initialization
+    const [isStorageReady, setIsStorageReady] = useState<boolean>(false);
+
     // Branch Selector State
     const [redoCandidates, setRedoCandidates] = useState<{ id: string, versionId: string, previewText: string }[]>([]);
 
-    // Actually using useEffect instead of useCallback for mount
+    // Async mount to load from IndexedDB via StorageUtility
     useEffect(() => {
-        const storedStories = localStorage.getItem('womb_stories');
-        if (storedStories) {
-            try { setSavedStories(JSON.parse(storedStories)); } catch (e) { console.error(e); }
-        }
+        const loadInitialData = async () => {
+            try {
+                const storedStories = await getItem<Story[]>(STORES.STORIES, 'womb_stories');
+                if (storedStories) {
+                    setSavedStories(storedStories);
+                }
+            } catch (e) {
+                console.error("Failed to load initial stories from Storage:", e);
+            } finally {
+                setIsStorageReady(true);
+            }
+        };
+        loadInitialData();
     }, []);
 
     // Derived Lineage and Active History State
@@ -64,10 +77,16 @@ export const useWombStory = ({
     }, [historyLogs, currentStoryId, activeLineage]);
 
 
-    // Save to LocalStorage Helper
-    const saveToLocalStorage = useCallback((stories: Story[]) => {
-        localStorage.setItem('womb_stories', JSON.stringify(stories));
-        setSavedStories(stories);
+    // Save to StorageUtility Helper
+    const saveToStorage = useCallback(async (stories: Story[]) => {
+        setSavedStories(stories); // Update UI immediately
+        try {
+            await setItem(STORES.STORIES, 'womb_stories', stories);
+        } catch (e) {
+            console.error("Failed to save stories to Storage:", e);
+            // Re-throw or handle QuotaExceededError equivalent if it ever happens in IndexedDB
+            throw e;
+        }
     }, []);
 
     // Core Story Save Logic
@@ -141,8 +160,8 @@ export const useWombStory = ({
         return newStories;
     }, []);
 
-    // Unified Global Save Logic (Story + Relations)
-    const saveGlobalStoryState = useCallback((
+    // Unified Global Save Logic (Story + Relations) (Now Async)
+    const saveGlobalStoryState = useCallback(async (
         targetId: string,
         targetContent: string,
         saveType: 'manual' | 'generate_pre' | 'generate_post',
@@ -150,14 +169,15 @@ export const useWombStory = ({
         _activeNerds: string[],
         _activeLores: string[]
     ) => {
-        // [Refactor Notice] activeMommies etc are passed to avoid closure staleness
         const now = Date.now();
-        const currentStories = JSON.parse(localStorage.getItem('womb_stories') || '[]') as Story[];
-        const currentRelations = JSON.parse(localStorage.getItem('womb_story_relations') || '[]') as StoryLoreRelation[];
+
+        // Fetch fresh state from StorageUtility instead of localStorage
+        const currentStories = await getItem<Story[]>(STORES.STORIES, 'womb_stories') || [];
+        const currentRelations = await getItem<StoryLoreRelation[]>(STORES.RELATIONS, 'womb_story_relations') || [];
 
         // 1. Save Story Data
         const newStories = saveStoryData(targetId, targetContent, saveType, currentStories, now);
-        saveToLocalStorage(newStories);
+        await saveToStorage(newStories);
 
         // Update Ref to track changes
         lastSavedContentRef.current = targetContent;
@@ -171,17 +191,17 @@ export const useWombStory = ({
         ];
         const updatedGlobalRelations = [...otherRelations, ...newRelations];
         setGlobalRelations(updatedGlobalRelations);
-        localStorage.setItem('womb_story_relations', JSON.stringify(updatedGlobalRelations));
+        await setItem(STORES.RELATIONS, 'womb_story_relations', updatedGlobalRelations);
 
         if (onStorySaved) {
             onStorySaved(targetId, targetContent, saveType);
         }
 
         return { newStories, updatedGlobalRelations };
-    }, [saveStoryData, saveToLocalStorage, setGlobalRelations, onStorySaved]);
+    }, [saveStoryData, saveToStorage, setGlobalRelations, onStorySaved]);
 
-    // Action: Manual Save (No Generation)
-    const handleManualSave = useCallback(() => {
+    // Action: Manual Save (No Generation) (Now awaits async save)
+    const handleManualSave = useCallback(async () => {
         if (!content.trim()) return;
 
         let targetStoryId = currentStoryId;
@@ -190,7 +210,7 @@ export const useWombStory = ({
             setCurrentStoryId(targetStoryId);
         }
 
-        saveGlobalStoryState(
+        await saveGlobalStoryState(
             targetStoryId,
             content,
             'manual',
@@ -221,8 +241,8 @@ export const useWombStory = ({
         transitionToNewStory();
     }, [transitionToNewStory]);
 
-    // Handle Delete
-    const handleDeleteStory = useCallback((e: React.MouseEvent, storyId: string) => {
+    // Handle Delete (Now async)
+    const handleDeleteStory = useCallback(async (e: React.MouseEvent, storyId: string) => {
         e.stopPropagation();
         const confirmMessage = lang === 'ja'
             ? "このストーリーを削除してもよろしいですか？"
@@ -230,19 +250,20 @@ export const useWombStory = ({
 
         if (window.confirm(confirmMessage)) {
             const newStories = savedStories.filter(s => s.id !== storyId);
-            saveToLocalStorage(newStories);
+            await saveToStorage(newStories);
 
             // Cascade Delete: Remove relations
-            const newRelations = globalRelations.filter(r => r.storyId !== storyId);
+            const currentRelations = await getItem<StoryLoreRelation[]>(STORES.RELATIONS, 'womb_story_relations') || [];
+            const newRelations = currentRelations.filter(r => r.storyId !== storyId);
             setGlobalRelations(newRelations);
-            localStorage.setItem('womb_story_relations', JSON.stringify(newRelations));
+            await setItem(STORES.RELATIONS, 'womb_story_relations', newRelations);
 
             // If deleting current story, clear editor using standard transition
             if (currentStoryId === storyId) {
                 transitionToNewStory();
             }
         }
-    }, [savedStories, lang, globalRelations, currentStoryId, saveToLocalStorage, setGlobalRelations, transitionToNewStory]);
+    }, [savedStories, lang, currentStoryId, saveToStorage, setGlobalRelations, transitionToNewStory]);
 
 
     // Helper to extract a minimal diff snippet for the Branch Selector
@@ -274,7 +295,7 @@ export const useWombStory = ({
         return preview;
     }, []);
 
-    const handleUndo = useCallback(() => {
+    const handleUndo = useCallback(async () => {
         if (!currentStoryId) return;
         const _currentStory = savedStories.find(s => s.id === currentStoryId);
         if (!_currentStory || !_currentStory.currentVersionId) return;
@@ -292,14 +313,14 @@ export const useWombStory = ({
             return s;
         });
 
-        saveToLocalStorage(newStories);
+        await saveToStorage(newStories);
         setContent(parentVersion.content);
         lastSavedContentRef.current = parentVersion.content;
 
         setRedoCandidates([]);
-    }, [currentStoryId, savedStories, saveToLocalStorage]);
+    }, [currentStoryId, savedStories, saveToStorage]);
 
-    const performRedoToVersion = useCallback((storyId: string, targetVersionId: string, targetContent: string) => {
+    const performRedoToVersion = useCallback(async (storyId: string, targetVersionId: string, targetContent: string) => {
         const newStories = savedStories.map(s => {
             if (s.id === storyId) {
                 return { ...s, currentVersionId: targetVersionId };
@@ -307,11 +328,11 @@ export const useWombStory = ({
             return s;
         });
 
-        saveToLocalStorage(newStories);
+        await saveToStorage(newStories);
         setContent(targetContent);
         lastSavedContentRef.current = targetContent;
         setRedoCandidates([]);
-    }, [savedStories, saveToLocalStorage]);
+    }, [savedStories, saveToStorage]);
 
 
     const handleRedo = useCallback(() => {
@@ -324,7 +345,8 @@ export const useWombStory = ({
 
         if (childVersions.length === 1) {
             const childVersion = childVersions[0];
-            performRedoToVersion(currentStoryId, childVersion.id, childVersion.content);
+            // Fire and forget async call, UI relies on optimistic/react state
+            performRedoToVersion(currentStoryId, childVersion.id, childVersion.content).catch(console.error);
         } else {
             const currentContent = _currentStory.versions.find(v => v.id === _currentStory.currentVersionId)?.content || "";
 
@@ -345,7 +367,7 @@ export const useWombStory = ({
         const targetVersion = _currentStory.versions.find(v => v.id === versionId);
         if (!targetVersion) return;
 
-        performRedoToVersion(_currentStory.id, versionId, targetVersion.content);
+        performRedoToVersion(_currentStory.id, versionId, targetVersion.content).catch(console.error);
     }, [currentStoryId, savedStories, performRedoToVersion]);
 
 
@@ -383,6 +405,7 @@ export const useWombStory = ({
     }
 
     return {
+        isStorageReady, // Exposed for parent components to avoid rendering before load
         currentStoryId, setCurrentStoryId,
         content, setContent,
         savedStories,
@@ -412,3 +435,4 @@ export const useWombStory = ({
     };
 
 };
+

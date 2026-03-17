@@ -57,6 +57,7 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
         mommyList, nerdList, loreList,
         globalRelations,
         historyLogs,
+        isStorageReady, // <--- Async Storage Loading State
 
         debugSystemPrompt,
         debugInputText,
@@ -309,6 +310,22 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
             alert(lang === 'ja' ? 'インポートに失敗しました。ファイルの形式が正しくない可能性があります。' : 'Failed to import entities. The file may be invalid.');
         }
     };
+
+    if (!isStorageReady) {
+        return (
+            <div style={{
+                display: 'flex', justifyContent: 'center', alignItems: 'center',
+                height: '100vh', width: '100vw', backgroundColor: '#0f172a', color: '#38bdf8',
+                flexDirection: 'column', gap: '1rem', fontFamily: 'monospace'
+            }}>
+                <div className="womb-loading-spinner" style={{
+                    width: '40px', height: '40px', border: '3px solid rgba(56, 189, 248, 0.2)',
+                    borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 1s linear infinite'
+                }} />
+                <div>INITIALIZING STORAGE DB...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="womb-system-container" style={{

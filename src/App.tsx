@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { MommySystem } from './components/mommy/MommySystem'
 import { WombSystem } from './components/womb/WombSystem'
 import { ApiKeyWarning } from './components/shared/ApiKeyWarning';
+import { migrateFromLocalStorage } from './utils/storageUtils';
 import './styles/global.css';
 
 function App() {
@@ -15,6 +16,23 @@ function App() {
         localStorage.setItem('deborah_lang', newLang)
     }
 
+    // Migration and Boot State
+    const [isMigrating, setIsMigrating] = useState(true);
+
+    useEffect(() => {
+        const bootSequence = async () => {
+            try {
+                // Execute migration from LocalStorage to IndexedDB
+                await migrateFromLocalStorage();
+            } catch (err) {
+                console.error("Migration failed during boot:", err);
+            } finally {
+                setIsMigrating(false);
+            }
+        };
+        bootSequence();
+    }, []);
+
     const [showSplash, setShowSplash] = useState(true)
     const [currentSystem, setCurrentSystem] = useState<'MOMMY' | 'WOMB'>('MOMMY')
     const [transitionStage, setTransitionStage] = useState<'idle' | 'active' | 'fading'>('idle')
@@ -23,12 +41,15 @@ function App() {
     // Splash screen timer
     // Text fade ends: 1.0s
     // BG fade starts: 0.6s, ends: 1.0s
-    // Unmount safely after 1.2s
-    if (showSplash) {
-        setTimeout(() => {
-            setShowSplash(false)
-        }, 1200)
-    }
+    // Unmount safely after 1.2s -> Blocked by isMigrating
+    useEffect(() => {
+        if (!isMigrating && showSplash) {
+            const timer = setTimeout(() => {
+                setShowSplash(false);
+            }, 1200);
+            return () => clearTimeout(timer);
+        }
+    }, [isMigrating, showSplash]);
 
     const handleSystemSwitch = () => {
         if (transitionStage !== 'idle') return

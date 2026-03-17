@@ -182,7 +182,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
     }, [baseHandleDeleteHistory]);
 
     // Handle full history add (Cord integration)
-    const handleAddFullHistory = useCallback((entityId: string, historyContent: string) => {
+    const handleAddFullHistory = useCallback(async (entityId: string, historyContent: string) => {
         try {
             let targetStoryId = currentStoryId;
             if (!targetStoryId) {
@@ -191,7 +191,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
             }
 
             // 1. Save Story State FIRST to determine if a new version is spawned
-            const result = saveGlobalStoryState(
+            const result = await saveGlobalStoryState(
                 targetStoryId,
                 content,
                 'manual',
@@ -199,7 +199,7 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
             );
 
             // 2. Extract the newly resolved currentVersionId (either identical to before, or a newly spawned child)
-            const updatedStory = result.newStories.find(s => s.id === targetStoryId);
+            const updatedStory = result.newStories.find((s: any) => s.id === targetStoryId);
             const resolvedVersionId = updatedStory?.currentVersionId || 'draft';
 
             // 3. Create the History Log attached to the correct resolved version using abstractions
@@ -313,6 +313,9 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         handleToggleInvalidateHistory,
 
         // Override the raw historyLogs with the Lineage-filtered ones
-        historyLogs: activeHistoryLogs
+        historyLogs: activeHistoryLogs,
+
+        // Expose Storage Ready state
+        isStorageReady: story.isStorageReady
     };
 };
