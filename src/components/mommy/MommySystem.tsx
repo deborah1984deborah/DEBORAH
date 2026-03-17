@@ -6,6 +6,7 @@ import '../../styles/mommy.css';
 import { CharacterList } from './CharacterList'
 import { LoreList } from './LoreList'
 import { MommyCharacter, NerdCharacter, Lore } from '../../types'
+import { getItem, setItem, STORES } from '../../utils/storageUtils';
 
 type ViewMode = 'mommy' | 'nerd' | 'lore'
 type SubMode = 'create' | 'list' | 'edit'
@@ -23,35 +24,52 @@ export function MommySystem({ lang }: Props) {
     // Tracks current active tab
     const [subMode, setSubMode] = useState<SubMode>('create')
 
-    const [mommyList, setMommyList] = useState<MommyCharacter[]>(() => {
-        const saved = localStorage.getItem('deborah_fuckmeat_v1')
-        return saved ? JSON.parse(saved) : []
-    })
+    const [isLoreReady, setIsLoreReady] = useState(false);
 
-    const [nerdList, setNerdList] = useState<NerdCharacter[]>(() => {
-        const saved = localStorage.getItem('deborah_penis_v1')
-        return saved ? JSON.parse(saved) : []
-    })
-
-    const [loreList, setLoreList] = useState<Lore[]>(() => {
-        const saved = localStorage.getItem('deborah_lore_v1')
-        return saved ? JSON.parse(saved) : []
-    })
+    const [mommyList, setMommyList] = useState<MommyCharacter[]>([])
+    const [nerdList, setNerdList] = useState<NerdCharacter[]>([])
+    const [loreList, setLoreList] = useState<Lore[]>([])
 
     const [editingChar, setEditingChar] = useState<MommyCharacter | NerdCharacter | Lore | null>(null)
 
+    // Load initial data
+    useEffect(() => {
+        let isMounted = true;
+        const loadInitialData = async () => {
+            try {
+                const storedMommy = await getItem<MommyCharacter[]>(STORES.LORE, 'deborah_fuckmeat_v1');
+                if (storedMommy && isMounted) setMommyList(storedMommy);
+
+                const storedNerd = await getItem<NerdCharacter[]>(STORES.LORE, 'deborah_penis_v1');
+                if (storedNerd && isMounted) setNerdList(storedNerd);
+
+                const storedLore = await getItem<Lore[]>(STORES.LORE, 'deborah_lore_v1');
+                if (storedLore && isMounted) setLoreList(storedLore);
+            } catch (error) {
+                console.error("Failed to load lore data from IndexedDB:", error);
+            } finally {
+                if (isMounted) setIsLoreReady(true);
+            }
+        };
+        loadInitialData();
+        return () => { isMounted = false; };
+    }, []);
+
     // Save data on change
     useEffect(() => {
-        localStorage.setItem('deborah_fuckmeat_v1', JSON.stringify(mommyList))
-    }, [mommyList])
+        if (!isLoreReady) return;
+        setItem(STORES.LORE, 'deborah_fuckmeat_v1', mommyList).catch(console.error);
+    }, [mommyList, isLoreReady])
 
     useEffect(() => {
-        localStorage.setItem('deborah_penis_v1', JSON.stringify(nerdList))
-    }, [nerdList])
+        if (!isLoreReady) return;
+        setItem(STORES.LORE, 'deborah_penis_v1', nerdList).catch(console.error);
+    }, [nerdList, isLoreReady])
 
     useEffect(() => {
-        localStorage.setItem('deborah_lore_v1', JSON.stringify(loreList))
-    }, [loreList])
+        if (!isLoreReady) return;
+        setItem(STORES.LORE, 'deborah_lore_v1', loreList).catch(console.error);
+    }, [loreList, isLoreReady])
 
     // Handle toggle click based on current active tab
     const handleViewChange = (newView: ViewMode) => {
@@ -150,6 +168,22 @@ export function MommySystem({ lang }: Props) {
 
     // Determine current view for Toggle Button display
     const currentActiveView = subMode === 'create' ? createView : (subMode === 'list' ? listView : 'mommy')
+
+    if (!isLoreReady) {
+        return (
+            <div style={{
+                display: 'flex', justifyContent: 'center', alignItems: 'center',
+                height: 'calc(100vh - 120px)', width: '100%', backgroundColor: 'transparent', color: '#FF69B4',
+                flexDirection: 'column', gap: '1rem', fontFamily: 'monospace'
+            }}>
+                <div className="womb-loading-spinner" style={{
+                    width: '40px', height: '40px', border: '3px solid rgba(255, 105, 180, 0.2)',
+                    borderTopColor: '#FF69B4', borderRadius: '50%', animation: 'spin 1s linear infinite'
+                }} />
+                <div>INITIALIZING STORAGE DB...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex items-start justify-center max-w-5xl mx-auto relative px-4">

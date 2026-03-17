@@ -1,18 +1,39 @@
 import { useState, useEffect, useCallback } from 'react';
 import { StoryEntityHistory, StoryEntityHistoryInvalidation } from '../../types';
+import { getItem, setItem, STORES } from '../../utils/storageUtils';
 
 export const useWombHistory = () => {
+    // Status State
+    const [isHistoryReady, setIsHistoryReady] = useState<boolean>(false);
+
     // History State
     const [historyLogs, setHistoryLogs] = useState<StoryEntityHistory[]>([]);
     const [invalidations, setInvalidations] = useState<StoryEntityHistoryInvalidation[]>([]);
 
-    // Load on mount
+    // Load on mount asynchronously from IndexedDB
     useEffect(() => {
-        const storedHistory = localStorage.getItem('deborah_history_logs_v1');
-        if (storedHistory) { try { setHistoryLogs(JSON.parse(storedHistory)); } catch (e) { console.error(e); } }
+        let isMounted = true;
 
-        const storedInvalidations = localStorage.getItem('deborah_history_invalidations_v1');
-        if (storedInvalidations) { try { setInvalidations(JSON.parse(storedInvalidations)); } catch (e) { console.error(e); } }
+        const loadHistoryData = async () => {
+            try {
+                const storedHistory = await getItem<StoryEntityHistory[]>(STORES.HISTORY, 'deborah_history_logs_v1');
+                if (storedHistory && isMounted) setHistoryLogs(storedHistory);
+
+                const storedInvalidations = await getItem<StoryEntityHistoryInvalidation[]>(STORES.HISTORY, 'deborah_history_invalidations_v1');
+                if (storedInvalidations && isMounted) setInvalidations(storedInvalidations);
+
+            } catch (error) {
+                console.error("Failed to load history data from IndexedDB:", error);
+            } finally {
+                if (isMounted) setIsHistoryReady(true);
+            }
+        };
+
+        loadHistoryData();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // Lineage Helper
@@ -49,7 +70,7 @@ export const useWombHistory = () => {
         };
         setHistoryLogs(prev => {
             const updated = [...prev, newHistory];
-            localStorage.setItem('deborah_history_logs_v1', JSON.stringify(updated));
+            setItem(STORES.HISTORY, 'deborah_history_logs_v1', updated).catch(console.error);
             return updated;
         });
         return newId;
@@ -64,9 +85,11 @@ export const useWombHistory = () => {
             historyId: id,
             versionId: currentVersionId || "draft" // if drafted without a story
         };
-        const updatedInvalidations = [...invalidations, newInvalidation];
-        setInvalidations(updatedInvalidations);
-        localStorage.setItem('deborah_history_invalidations_v1', JSON.stringify(updatedInvalidations));
+        setInvalidations(prevInvalidations => {
+            const updatedInvalidations = [...prevInvalidations, newInvalidation];
+            setItem(STORES.HISTORY, 'deborah_history_invalidations_v1', updatedInvalidations).catch(console.error);
+            return updatedInvalidations;
+        });
 
         // 2. Create the new record (re-using the old entityId and storyId)
         setHistoryLogs(prev => {
@@ -82,18 +105,18 @@ export const useWombHistory = () => {
                     createdAt: Date.now()
                 };
                 const updatedLogs = [...prev, newHistory];
-                localStorage.setItem('deborah_history_logs_v1', JSON.stringify(updatedLogs));
+                setItem(STORES.HISTORY, 'deborah_history_logs_v1', updatedLogs).catch(console.error);
                 return updatedLogs;
             }
             return prev;
         });
-    }, [invalidations]);
+    }, []);
 
     const handleDeleteHistory = useCallback((id: string) => {
         if (window.confirm("Delete this history entry?")) {
             setHistoryLogs(prev => {
                 const updatedLogs = prev.filter(log => log.id !== id);
-                localStorage.setItem('deborah_history_logs_v1', JSON.stringify(updatedLogs));
+                setItem(STORES.HISTORY, 'deborah_history_logs_v1', updatedLogs).catch(console.error);
                 return updatedLogs;
             });
         }
@@ -115,12 +138,13 @@ export const useWombHistory = () => {
                 };
                 updated = [...prev, newInvalidation];
             }
-            localStorage.setItem('deborah_history_invalidations_v1', JSON.stringify(updated));
+            setItem(STORES.HISTORY, 'deborah_history_invalidations_v1', updated).catch(console.error);
             return updated;
         });
     }, []);
 
     return {
+        isHistoryReady,
         historyLogs,
         setHistoryLogs,
         invalidations,

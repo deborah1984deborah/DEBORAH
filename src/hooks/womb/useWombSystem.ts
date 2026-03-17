@@ -316,6 +316,6 @@ export const useWombSystem = ({ lang }: UseWombSystemProps) => {
         historyLogs: activeHistoryLogs,
 
         // Expose Storage Ready state
-        isStorageReady: story.isStorageReady
+        isStorageReady: story.isStorageReady && lore.isLoreReady && history.isHistoryReady
     };
 };

@@ -21,10 +21,7 @@ import { exportStoryData } from '../../utils/exportUtils';
 import { readImportedStoryData } from '../../utils/importUtils';
 import { exportAllEntitiesAsZip } from '../../utils/entityExportUtils';
 import { readImportedEntitiesZip } from '../../utils/entityImportUtils';
-
-
-
-
+import { getItem, setItem, STORES } from '../../utils/storageUtils';
 export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
     // Use Custom Hook for all Logic & State
     const {
@@ -269,14 +266,14 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
             const imported = await readImportedEntitiesZip(file);
 
             // Read current records
-            const getLocal = (key: string) => {
-                const str = localStorage.getItem(key);
-                return str ? JSON.parse(str) : [];
+            const getLocal = async (key: string) => {
+                const arr = await getItem<any[]>(STORES.LORE, key);
+                return arr || [];
             };
 
-            const currentMommy = getLocal('deborah_fuckmeat_v1');
-            const currentNerd = getLocal('deborah_penis_v1');
-            const currentLore = getLocal('deborah_lore_v1');
+            const currentMommy = await getLocal('deborah_fuckmeat_v1');
+            const currentNerd = await getLocal('deborah_penis_v1');
+            const currentLore = await getLocal('deborah_lore_v1');
 
             // Merge logic: Overwrite if ID exists, append if new.
             const mergeLists = (currentList: any[], importedList: any[]) => {
@@ -296,10 +293,10 @@ export const WombSystem: React.FC<WombSystemProps> = ({ lang }) => {
             const mergedNerd = mergeLists(currentNerd, imported.nerdList);
             const mergedLore = mergeLists(currentLore, imported.loreList);
 
-            // Save to localStorage
-            localStorage.setItem('deborah_fuckmeat_v1', JSON.stringify(mergedMommy));
-            localStorage.setItem('deborah_penis_v1', JSON.stringify(mergedNerd));
-            localStorage.setItem('deborah_lore_v1', JSON.stringify(mergedLore));
+            // Save to IndexedDB
+            await setItem(STORES.LORE, 'deborah_fuckmeat_v1', mergedMommy);
+            await setItem(STORES.LORE, 'deborah_penis_v1', mergedNerd);
+            await setItem(STORES.LORE, 'deborah_lore_v1', mergedLore);
 
             if (window.confirm(lang === 'ja' ? "エンティティのインポートが完了しました。データを反映させるため、ページをリロードしますか？" : "Import complete. Reload the page to apply changes?")) {
                 window.location.reload();

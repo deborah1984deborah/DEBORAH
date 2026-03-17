@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { LoreItem, StoryLoreRelation } from '../../types';
+import { getItem, STORES } from '../../utils/storageUtils';
 
 export const useWombLore = () => {
+    // Status State
+    const [isLoreReady, setIsLoreReady] = useState<boolean>(false);
+
     // Lore Data (Loaded from main storage)
     const [mommyList, setMommyList] = useState<LoreItem[]>([]);
     const [nerdList, setNerdList] = useState<LoreItem[]>([]);
@@ -15,22 +19,40 @@ export const useWombLore = () => {
     // Global Relations State (Join Table)
     const [globalRelations, setGlobalRelations] = useState<StoryLoreRelation[]>([]);
 
-    // Load initial Lore data on mount
+    // Load initial Lore data on mount asynchronously from IndexedDB
     useEffect(() => {
-        const storedMommy = localStorage.getItem('deborah_fuckmeat_v1');
-        if (storedMommy) { try { setMommyList(JSON.parse(storedMommy)); } catch (e) { console.error(e); } }
+        let isMounted = true;
 
-        const storedNerd = localStorage.getItem('deborah_penis_v1');
-        if (storedNerd) { try { setNerdList(JSON.parse(storedNerd)); } catch (e) { console.error(e); } }
+        const loadLoreData = async () => {
+            try {
+                const storedMommy = await getItem<LoreItem[]>(STORES.LORE, 'deborah_fuckmeat_v1');
+                if (storedMommy && isMounted) setMommyList(storedMommy);
 
-        const storedLore = localStorage.getItem('deborah_lore_v1');
-        if (storedLore) { try { setLoreList(JSON.parse(storedLore)); } catch (e) { console.error(e); } }
+                const storedNerd = await getItem<LoreItem[]>(STORES.LORE, 'deborah_penis_v1');
+                if (storedNerd && isMounted) setNerdList(storedNerd);
 
-        const storedRelations = localStorage.getItem('womb_story_relations');
-        if (storedRelations) { try { setGlobalRelations(JSON.parse(storedRelations)); } catch (e) { console.error(e); } }
+                const storedLore = await getItem<LoreItem[]>(STORES.LORE, 'deborah_lore_v1');
+                if (storedLore && isMounted) setLoreList(storedLore);
+
+                const storedRelations = await getItem<StoryLoreRelation[]>(STORES.RELATIONS, 'womb_story_relations');
+                if (storedRelations && isMounted) setGlobalRelations(storedRelations);
+
+            } catch (error) {
+                console.error("Failed to load lore data from IndexedDB:", error);
+            } finally {
+                if (isMounted) setIsLoreReady(true);
+            }
+        };
+
+        loadLoreData();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     return {
+        isLoreReady,
         mommyList, setMommyList,
         nerdList, setNerdList,
         loreList, setLoreList,
